@@ -1,0 +1,63 @@
+name: Build LitePPTXViewer APK
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Restore release signing key (if configured)
+        env:
+          KS_B64: ${{ secrets.LITE_KEYSTORE_B64 }}
+        run: |
+          if [ -n "$KS_B64" ]; then
+            echo "$KS_B64" | base64 -d > "$RUNNER_TEMP/release.jks"
+            echo "LITE_KEYSTORE_PATH=$RUNNER_TEMP/release.jks" >> "$GITHUB_ENV"
+            echo "LITE_KEYSTORE_PASSWORD=${{ secrets.LITE_KEYSTORE_PASSWORD }}" >> "$GITHUB_ENV"
+            echo "LITE_KEY_ALIAS=${{ secrets.LITE_KEY_ALIAS }}" >> "$GITHUB_ENV"
+            echo "LITE_KEY_PASSWORD=${{ secrets.LITE_KEY_PASSWORD }}" >> "$GITHUB_ENV"
+          else
+            echo "No release key configured - falling back to the debug key."
+          fi
+
+      - name: Build release APK
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleRelease --no-daemon --console=plain
+
+      - name: Name the APK
+        run: cp app/build/outputs/apk/release/app-release.apk LitePPTXViewer.apk
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: LitePPTXViewer-APK
+          path: LitePPTXViewer.apk
+
+      - name: Publish rolling "latest" release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete latest --cleanup-tag --yes || true
+          gh release create latest LitePPTXViewer.apk \
+            --title "LitePPTXViewer - latest build" \
+            --notes "Automated build of commit ${GITHUB_SHA::7}. Install LitePPTXViewer.apk on Android 5.0+." \
+            --target "$GITHUB_SHA"

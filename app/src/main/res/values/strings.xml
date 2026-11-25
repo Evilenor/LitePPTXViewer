@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">LitePPTX</string>
+    <string name="open_file">Open PowerPoint (.pptx)</string>
+    <string name="empty_subtitle">Select a .pptx file to view slides cleanly</string>
+    <string name="menu_open_another">Open another file</string>
+    <string name="menu_share">Share file</string>
+    <string name="menu_reset_zoom">Reset zoom</string>
+    <string name="error_loading">Could not open this PowerPoint file.</string>
+    <string name="back">Back</string>
+    <string name="more_options">More options</string>
+</resources>
