@@ -63,7 +63,8 @@ class SlideRenderer(private val deck: Deck) {
                     is Pic -> drawPic(canvas, el, r, paint)
                     is Tbl -> drawTable(canvas, el, r, k, ptPx, paint)
                 }
-            } catch (_: Exception) {
+            } catch (e: Exception) {
+                android.util.Log.w("LitePPTX", "element failed: " + el.javaClass.simpleName, e)
                 // never let one odd element break the whole slide
             }
             canvas.restore()
@@ -194,7 +195,8 @@ class SlideRenderer(private val deck: Deck) {
             val b = deck.entry(path)?.use { BitmapFactory.decodeStream(it, null, o2) }
             if (b != null && b.byteCount < 4 * 1024 * 1024) media.put(key, b)
             b
-        } catch (_: Throwable) {
+        } catch (t: Throwable) {
+            android.util.Log.w("LitePPTX", "decode failed: " + path, t)
             null
         }
     }

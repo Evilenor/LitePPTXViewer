@@ -207,7 +207,8 @@ class MainActivity : Activity() {
                         f.delete()
                         throw t
                     }
-                } catch (_: Throwable) {
+                } catch (t: Throwable) {
+                    android.util.Log.w("LitePPTX", "load failed", t)
                     parsed = null
                 }
                 val result = parsed

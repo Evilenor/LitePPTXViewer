@@ -36,6 +36,8 @@ class Node(val name: String, val attrs: Map<String, String>) {
 }
 
 object Dom {
+    private const val REL_NS = "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+
     fun parse(bytes: ByteArray): Node? = try {
         parseStream(ByteArrayInputStream(bytes))
     } catch (e: Exception) {
@@ -44,6 +46,7 @@ object Dom {
 
     private fun parseStream(input: ByteArrayInputStream): Node? {
         val p = Xml.newPullParser()
+        try { p.setFeature(XmlPullParser.FEATURE_PROCESS_NAMESPACES, true) } catch (_: Exception) { }
         p.setInput(input, null)
         val stack = ArrayList<Node>()
         var root: Node? = null
@@ -56,8 +59,10 @@ object Dom {
                         val m = HashMap<String, String>(n * 2)
                         for (i in 0 until n) {
                             val an = p.getAttributeName(i)
-                            // keep prefixed attributes as-is (r:embed); unprefixed ones as-is
-                            m[an] = p.getAttributeValue(i)
+                            // Android's parser returns local names only, so re-attach "r:" to relationship-namespace
+                            // attributes (r:embed, r:id ...); otherwise r:id would collide with the plain id attribute.
+                            val key = if (p.getAttributeNamespace(i) == REL_NS) "r:" + an else an
+                            m[key] = p.getAttributeValue(i)
                         }
                         m
                     }

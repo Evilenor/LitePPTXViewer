@@ -75,7 +75,8 @@ class SlideAdapter(
             pool.execute {
                 val bmp = try {
                     renderer.render(slide, widthPx)
-                } catch (_: Throwable) {
+                } catch (t: Throwable) {
+                    android.util.Log.w("LitePPTX", "render failed", t)
                     null
                 }
                 main.post {
