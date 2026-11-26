@@ -68,4 +68,36 @@
     <string name="donate_sub">رایگان، بدون تبلیغ و کم‌حجم. حمایت شما همین‌طور نگهش می‌دارد.</string>
     <string name="donate_cta">حمایت</string>
     <string name="menu_donate">حمایت از برنامه ♥</string>
+
+    <string name="menu_scan">اسکن سند</string>
+    <string name="menu_export_pdf">خروجی PDF</string>
+    <string name="export_open_first">اول یک پرزنتیشن باز کنید</string>
+    <string name="export_working">در حال تبدیل اسلاید %1$d از %2$d…</string>
+
+    <string name="scan_title">اسکن سند</string>
+    <string name="scan_hint">از صفحه عکس بگیرید یا عکس‌ها را از گالری انتخاب کنید. صفحه روی خود گوشی صاف و تمیز می‌شود و چیزی آپلود نمی‌شود.</string>
+    <string name="scan_take">گرفتن عکس</string>
+    <string name="scan_gallery">از گالری</string>
+    <string name="scan_adjust">گوشه‌ها را روی لبه‌ی صفحه بکشید</string>
+    <string name="scan_adjust_manual">لبه‌های صفحه پیدا نشد. گوشه‌ها را دستی بچینید</string>
+    <string name="scan_retake">عکس دوباره</string>
+    <string name="scan_full">کل عکس</string>
+    <string name="scan_auto">خودکار</string>
+    <string name="scan_next">بعدی</string>
+    <string name="scan_f_original">اصلی</string>
+    <string name="scan_f_clean">تمیز</string>
+    <string name="scan_f_bw">سیاه‌وسفید</string>
+    <string name="scan_f_gray">خاکستری</string>
+    <string name="scan_add_page">صفحه‌ی بعد</string>
+    <string name="scan_page_n">صفحه %1$d</string>
+    <string name="scan_finding">در حال پیدا کردن صفحه…</string>
+    <string name="scan_processing">در حال پردازش…</string>
+    <string name="scan_saving">در حال ذخیره‌ی صفحه…</string>
+    <string name="scan_bad_quad">خط دور صفحه خودش را قطع کرده. گوشه‌ها را طوری بچینید که چهارضلعی شود.</string>
+    <string name="scan_no_camera">برنامه‌ی دوربین پیدا نشد</string>
+    <string name="scan_error">خواندن این عکس ممکن نشد</string>
+    <string name="scan_discard_title">اسکن دور ریخته شود؟</string>
+    <string name="scan_discard_msg">%1$d صفحه‌ی اسکن‌شده از بین می‌رود.</string>
+    <string name="scan_discard">دور ریختن</string>
+    <string name="scan_keep">نگه داشتن</string>
 </resources>

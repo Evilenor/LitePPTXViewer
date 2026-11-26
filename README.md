@@ -5,8 +5,8 @@
 <h1 align="center">LitePPTX</h1>
 
 <p align="center">
-  <b>A featherweight PowerPoint viewer and photo-to-PDF maker for Android.</b><br>
-  Under 100&nbsp;KB. Zero dependencies. No ads, no accounts, no tracking.
+  <b>A featherweight PowerPoint viewer, document scanner and photo-to-PDF maker for Android.</b><br>
+  About 130&nbsp;KB. Zero dependencies. No ads, no accounts, no tracking.
 </p>
 
 <p align="center">
@@ -33,11 +33,11 @@
 
 ## Why LitePPTX
 
-Opening a `.pptx` someone sent you in a chat shouldn't need a 300&nbsp;MB office suite. Turning five photos into one clean PDF shouldn't need an account or a watermark. LitePPTX does both, in a package smaller than most app icons, and updates itself.
+Opening a `.pptx` someone sent you in a chat shouldn't need a 300&nbsp;MB office suite. Scanning a receipt or turning five photos into one clean PDF shouldn't need an account, a subscription or a watermark. LitePPTX does all of it, in a package smaller than a single phone photo, and updates itself.
 
 | | |
 |---|---|
-| **Tiny** | The release APK is under 100&nbsp;KB. Only Android platform APIs are used. There is not a single third-party library. |
+| **Tiny** | The release APK is about 130&nbsp;KB. Only Android platform APIs are used. There is not a single third-party library. |
 | **Fast** | Slides are rendered lazily, only when they scroll into view, and cached. Opening a deck takes about a second on an emulator. |
 | **Private** | No analytics, no ads, no permissions to read your files. Your documents never leave the phone. |
 | **Self-updating** | One tap in the app downloads, verifies and installs new releases. |
@@ -51,6 +51,16 @@ Opening a `.pptx` someone sent you in a chat shouldn't need a 300&nbsp;MB office
 - Understands slide **masters and layouts** (placeholders inherit position, size, fonts and colours), shapes (rectangles, rounded rectangles, ellipses, lines, freeform paths, groups), gradient and solid fills, borders, theme colours with tints, **tables**, bullets and numbering, text anchoring and autofit, and pictures with cropping.
 - **Right-to-left text** (Persian, Arabic) with correct alignment and bullets.
 - Everything is parsed and drawn by the app itself, straight from the file's XML.
+- **Export as PDF** (**⋯ > Export as PDF**): every slide is rendered to a page, then you can save, open or share the file.
+
+### Document scanner
+A CamScanner-style scanner with no account, no ads and no upload: **Scan document** on the start screen, in the menu, or as a launcher shortcut.
+
+- **Take photos or pick them** from the gallery, several pages in a row. The photo is taken by your phone's own camera app, so LitePPTX needs **no camera permission**.
+- **Automatic page detection** proposes the outline of the paper, and you can drag the four corners to fix it (or tap *Full photo* / *Auto*). The page is straightened (perspective corrected) on the device.
+- **Filters:** *Original*, *Clean* (removes shadows and evens out the paper), *B&W* and *Gray*, with a live preview. Rotate any page.
+- **Create PDF** from all the pages, then save to Downloads, open or share. Each page is stored as a JPEG with a long edge of up to 2600&nbsp;px, which keeps text sharp and files small.
+- All the image processing is our own code, with no ML library and no Google Play Services, so it works on any phone.
 
 ### Images to PDF
 Select photos in your gallery, tap **Share > Create PDF**, and get a clean, professional PDF in seconds.
@@ -90,22 +100,25 @@ Requires **Android 5.0 (API 21)** or newer. Integrity: each release ships a `.sh
 ## Using it
 
 - **View a presentation:** open any `.pptx` file, or launch the app and tap *Open PowerPoint*.
-- **Make a PDF:** select images in Gallery / Photos / Files, tap *Share*, choose **Create PDF**. Or long-press the app icon and pick *Images to PDF*.
+- **Scan a document:** tap *Scan document*, take or pick photos, adjust the corners, choose a filter, then *Create PDF*. Long-press the app icon for a shortcut.
+- **Make a PDF from photos:** select images in Gallery / Photos / Files, tap *Share*, choose **Create PDF**. Or long-press the app icon and pick *Images to PDF*.
 
 ## Limitations
 
-LitePPTX is a *viewer*, deliberately minimal:
+LitePPTX is deliberately minimal:
 
 - Charts and SmartArt are not rendered; some preset shapes (arrows, stars) are drawn as rectangles.
 - Animations, transitions, notes and embedded fonts are ignored (system fonts are used).
 - Only `.pptx` is supported, not legacy `.ppt`.
 - Page reordering uses the ◀ ▶ buttons rather than drag and drop.
+- The scanner has **no OCR** (no searchable text) and no ID-card mode yet. Automatic edge detection works best on a plain background; on a busy one, drag the corners by hand.
+- On very low-memory phones the scanner reduces the page resolution automatically; this has only been tested on an emulator so far.
 
 Rendering fidelity has been checked on an Android 15 emulator with test decks; real-world files vary, so please [open an issue](https://github.com/Evilenor/LitePPTXViewer/issues) with a sample if something looks wrong.
 
 ## Privacy
 
-LitePPTX has no analytics and no ads. Its only network traffic is the update check (`GET api.github.com/.../releases/latest`) and, when you tap Update, the APK download from GitHub. Files you open or convert are processed on the device. The **Donate** button only opens the support page in your browser; the app itself sends nothing. Declared permissions: `INTERNET` (updates) and `REQUEST_INSTALL_PACKAGES` (to hand the verified update to Android's installer).
+LitePPTX has no analytics and no ads. Its only network traffic is the update check (`GET api.github.com/.../releases/latest`) and, when you tap Update, the APK download from GitHub. Files you open, scan or convert are processed on the device. Scanning uses your phone's camera app to take the photo, so LitePPTX never asks for the camera permission. The **Donate** button only opens the support page in your browser; the app itself sends nothing. Declared permissions: `INTERNET` (updates) and `REQUEST_INSTALL_PACKAGES` (to hand the verified update to Android's installer).
 
 ## Build from source
 
@@ -123,8 +136,10 @@ The APK lands in `app/build/outputs/apk/release/`. Without signing secrets it is
 app/src/main/java/com/litepptx/viewer/
   MainActivity.kt        viewer screen, update bar
   PdfMakerActivity.kt    Images to PDF editor and share target
+  ScanActivity.kt        document scanner: capture, crop, filter, PDF
+  scan/                  page detection, perspective warp, filters, crop view
   pptx/                  PPTX parser and slide renderer (pure Android APIs)
-  pdf/                   streaming PDF writer, image pipeline, file provider
+  pdf/                   streaming PDF writer, image pipeline, slide-to-PDF export, file provider
   update/Updater.kt      GitHub Releases updater
 ```
 

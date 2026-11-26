@@ -8,6 +8,7 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.provider.OpenableColumns
+import android.text.format.Formatter
 import android.view.View
 import android.view.WindowInsets
 import android.widget.AbsListView
@@ -17,6 +18,8 @@ import android.widget.PopupMenu
 import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
+import com.litepptx.viewer.pdf.PdfActions
+import com.litepptx.viewer.pdf.PptxPdfExporter
 import com.litepptx.viewer.pptx.Deck
 import com.litepptx.viewer.pptx.PptxParser
 import com.litepptx.viewer.update.Updater
@@ -36,6 +39,10 @@ class MainActivity : Activity() {
     private lateinit var btnUpdate: Button
 
     private val net = Executors.newSingleThreadExecutor()
+    private val exportPool = Executors.newSingleThreadExecutor()
+    @Volatile private var exportBusy = false
+    @Volatile private var exportCancel = false
+    private var exportFile: File? = null
     private var updInfo: Updater.Info? = null
     private var updFile: File? = null
     @Volatile private var updBusy = false
@@ -113,6 +120,7 @@ class MainActivity : Activity() {
         findViewById<ImageButton>(R.id.btnMore).setOnClickListener { showMenu(it) }
         findViewById<Button>(R.id.btnOpenFile).setOnClickListener { pickFile() }
         findViewById<Button>(R.id.btnImagesPdf).setOnClickListener { openPdfMaker() }
+        findViewById<View>(R.id.btnScan).setOnClickListener { openScanner() }
 
         list.setOnScrollListener(object : AbsListView.OnScrollListener {
             override fun onScrollStateChanged(view: AbsListView, scrollState: Int) {}
@@ -163,11 +171,13 @@ class MainActivity : Activity() {
 
     override fun onDestroy() {
         token++
+        exportCancel = true
         ui.removeCallbacksAndMessages(null)
         adapter?.release()
         deck?.close()
         io.shutdownNow()
         net.shutdownNow()
+        exportPool.shutdownNow()
         super.onDestroy()
     }
 
@@ -209,6 +219,19 @@ class MainActivity : Activity() {
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
         if (requestCode == REQ_OPEN && resultCode == RESULT_OK) data?.data?.let { load(it) }
+        if (requestCode == REQ_SAVE && resultCode == RESULT_OK) {
+            val dest = data?.data
+            val f = exportFile
+            if (dest != null && f != null) {
+                try {
+                    exportPool.execute {
+                        val ok = PdfActions.copyTo(this, f, dest)
+                        ui.post { toastSaved(ok) }
+                    }
+                } catch (_: Exception) {
+                }
+            }
+        }
     }
 
     private fun showMenu(anchor: View) {
@@ -218,6 +241,8 @@ class MainActivity : Activity() {
             when (item.itemId) {
                 R.id.action_open -> { pickFile(); true }
                 R.id.action_images_pdf -> { openPdfMaker(); true }
+                R.id.action_scan -> { openScanner(); true }
+                R.id.action_export_pdf -> { exportPdf(); true }
                 R.id.action_check_update -> { checkUpdate(true); true }
                 R.id.action_donate -> { openDonate(); true }
                 R.id.action_share -> { share(); true }
@@ -230,6 +255,94 @@ class MainActivity : Activity() {
 
     private fun openPdfMaker() {
         startActivity(Intent(this, PdfMakerActivity::class.java))
+    }
+
+    private fun openScanner() {
+        startActivity(Intent(this, ScanActivity::class.java).putExtra(ScanActivity.EXTRA_AUTO, true))
+    }
+
+    // ------------------------------------------------------------------ export as PDF
+
+    private fun exportPdf() {
+        val d = deck
+        if (d == null) {
+            Toast.makeText(this, R.string.export_open_first, Toast.LENGTH_SHORT).show()
+            return
+        }
+        if (exportBusy) return
+        exportBusy = true
+        exportCancel = false
+        val n = d.slides.size
+        val base = (displayName(currentUri ?: Uri.EMPTY) ?: "")
+            .removeSuffix(".pptx").removeSuffix(".PPTX")
+            .replace(Regex("[\\\\/:*?\"<>|]"), "_").trim().ifBlank { "Presentation" }
+        val name = "$base.pdf"
+        val my = token
+        val dlg = android.app.AlertDialog.Builder(this)
+            .setMessage(getString(R.string.export_working, 1, n))
+            .setNegativeButton(R.string.cancel) { _, _ -> exportCancel = true }
+            .setCancelable(false)
+            .create()
+        dlg.show()
+        try {
+            exportPool.execute {
+                val dir = File(cacheDir, "pdf").apply { mkdirs() }
+                dir.listFiles()?.forEach {
+                    if (System.currentTimeMillis() - it.lastModified() > 3_600_000L) it.delete()
+                }
+                val f = File(dir, name)
+                var res: PptxPdfExporter.Result? = null
+                var failed = false
+                try {
+                    res = PptxPdfExporter.export(d, f, base,
+                        { i -> ui.post { if (dlg.isShowing) dlg.setMessage(getString(R.string.export_working, i + 1, n)) } },
+                        { exportCancel || isFinishing || token != my })
+                } catch (t: Throwable) {
+                    android.util.Log.w("LitePPTX", "export failed", t)
+                    failed = true
+                }
+                val r = res
+                ui.post {
+                    exportBusy = false
+                    try { dlg.dismiss() } catch (_: Exception) {}
+                    when {
+                        isFinishing || token != my -> {}
+                        failed -> Toast.makeText(this, R.string.error_pdf, Toast.LENGTH_LONG).show()
+                        r != null -> showExported(f, r)
+                    }
+                }
+            }
+        } catch (_: Exception) {
+            exportBusy = false
+            try { dlg.dismiss() } catch (_: Exception) {}
+        }
+    }
+
+    private fun showExported(f: File, r: PptxPdfExporter.Result) {
+        exportFile = f
+        PdfActions.showResult(this, f, r.pages, r.bytes) { saveExported(it) }
+    }
+
+    private fun saveExported(f: File) {
+        if (Build.VERSION.SDK_INT >= 29) {
+            try {
+                exportPool.execute {
+                    val ok = PdfActions.saveToDownloads(this, f)
+                    ui.post { toastSaved(ok) }
+                }
+            } catch (_: Exception) {
+            }
+        } else {
+            try {
+                startActivityForResult(PdfActions.createDocumentIntent(f.name), REQ_SAVE)
+            } catch (_: Exception) {
+            }
+        }
+    }
+
+    private fun toastSaved(ok: Boolean) {
+        if (isFinishing) return
+        Toast.makeText(this, if (ok) R.string.saved_downloads else R.string.error_pdf, Toast.LENGTH_SHORT).show()
     }
 
     /** Opens the support page in the browser. The app itself sends nothing. */
@@ -483,6 +596,7 @@ class MainActivity : Activity() {
 
     private companion object {
         const val REQ_OPEN = 1001
+        const val REQ_SAVE = 1002
         const val DONATE_URL = "https://the-evilenor.vercel.app/support"
     }
 }

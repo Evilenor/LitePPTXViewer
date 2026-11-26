@@ -68,4 +68,36 @@
     <string name="donate_sub">Free, ad-free and tiny. A donation keeps it that way.</string>
     <string name="donate_cta">Donate</string>
     <string name="menu_donate">Donate ♥</string>
+
+    <string name="menu_scan">Scan document</string>
+    <string name="menu_export_pdf">Export as PDF</string>
+    <string name="export_open_first">Open a presentation first</string>
+    <string name="export_working">Exporting slide %1$d of %2$d…</string>
+
+    <string name="scan_title">Scan document</string>
+    <string name="scan_hint">Photograph a page or pick photos from your gallery. It is straightened and cleaned up on your phone, nothing is uploaded.</string>
+    <string name="scan_take">Take photo</string>
+    <string name="scan_gallery">From gallery</string>
+    <string name="scan_adjust">Drag the corners to fit the page</string>
+    <string name="scan_adjust_manual">Could not find the page edges. Place the corners by hand</string>
+    <string name="scan_retake">Retake</string>
+    <string name="scan_full">Full photo</string>
+    <string name="scan_auto">Auto</string>
+    <string name="scan_next">Next</string>
+    <string name="scan_f_original">Original</string>
+    <string name="scan_f_clean">Clean</string>
+    <string name="scan_f_bw">B&amp;W</string>
+    <string name="scan_f_gray">Gray</string>
+    <string name="scan_add_page">Add page</string>
+    <string name="scan_page_n">Page %1$d</string>
+    <string name="scan_finding">Finding the page…</string>
+    <string name="scan_processing">Processing…</string>
+    <string name="scan_saving">Saving page…</string>
+    <string name="scan_bad_quad">The outline crosses itself. Move the corners so it forms a four-sided page.</string>
+    <string name="scan_no_camera">No camera app found</string>
+    <string name="scan_error">Could not read that photo</string>
+    <string name="scan_discard_title">Discard scan?</string>
+    <string name="scan_discard_msg">%1$d scanned pages will be lost.</string>
+    <string name="scan_discard">Discard</string>
+    <string name="scan_keep">Keep</string>
 </resources>

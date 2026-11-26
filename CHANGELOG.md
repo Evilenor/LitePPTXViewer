@@ -3,6 +3,19 @@
 All notable changes to LitePPTX. Versions follow [semantic versioning](https://semver.org/).
 Release notes for each version live in [`release-notes/`](release-notes/).
 
+## [1.4.0] - 2026-11-26
+
+### Added
+- **Document scanner** (*Scan document* on the start screen, in the menu and as a launcher shortcut). Take photos with the phone's camera app (no camera permission needed) or pick them from the gallery, several pages in a row. Automatic page detection proposes the outline, the four corners can be dragged, and the page is straightened on the device. Filters: *Original*, *Clean*, *B&W*, *Gray*. Rotate pages, then create a PDF.
+- **Export as PDF** for presentations (**⋯ > Export as PDF**): every slide is rendered to a PDF page.
+
+### Changed
+- The "Your PDF is ready" dialog no longer closes when you tap *Save*, so you can save and then share.
+- The release APK grows from about 97 KB to about 131 KB. Still no third-party libraries.
+
+### Known limitations
+- No OCR and no ID-card mode in the scanner yet. Automatic edge detection is weaker on busy backgrounds; the corners can be set by hand.
+
 ## [1.3.2] - 2026-11-26
 
 ### Added

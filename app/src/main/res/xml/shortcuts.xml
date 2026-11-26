@@ -1,5 +1,19 @@
 <shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
     <shortcut
+        android:shortcutId="scan_document"
+        android:enabled="true"
+        android:icon="@drawable/ic_scan_tile"
+        android:shortcutShortLabel="@string/scan_title">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetClass="com.litepptx.viewer.ScanActivity"
+            android:targetPackage="com.litepptx.viewer">
+            <extra
+                android:name="auto"
+                android:value="true" />
+        </intent>
+    </shortcut>
+    <shortcut
         android:shortcutId="images_to_pdf"
         android:enabled="true"
         android:icon="@drawable/ic_pdf_tile"

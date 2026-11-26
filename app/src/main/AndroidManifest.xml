@@ -81,6 +81,20 @@
             </intent-filter>
         </activity>
 
+        <!-- Document scanner. The system camera app takes the photo, so no camera permission is needed. -->
+        <activity
+            android:name=".ScanActivity"
+            android:configChanges="orientation|screenSize|keyboardHidden|smallestScreenSize|screenLayout"
+            android:exported="false"
+            android:label="@string/scan_title"
+            android:launchMode="singleTop" />
+
+        <provider
+            android:name=".scan.ScanProvider"
+            android:authorities="com.litepptx.viewer.scan"
+            android:exported="false"
+            android:grantUriPermissions="true" />
+
         <provider
             android:name=".pdf.PdfShareProvider"
             android:authorities="com.litepptx.viewer.pdf"

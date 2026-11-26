@@ -6,6 +6,12 @@
         android:id="@+id/action_images_pdf"
         android:title="@string/menu_images_pdf" />
     <item
+        android:id="@+id/action_scan"
+        android:title="@string/menu_scan" />
+    <item
+        android:id="@+id/action_export_pdf"
+        android:title="@string/menu_export_pdf" />
+    <item
         android:id="@+id/action_check_update"
         android:title="@string/menu_check_update" />
     <item
