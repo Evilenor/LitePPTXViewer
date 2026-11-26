@@ -3,6 +3,14 @@
 All notable changes to LitePPTX. Versions follow [semantic versioning](https://semver.org/).
 Release notes for each version live in [`release-notes/`](release-notes/).
 
+## [1.3.1] - 2026-11-26
+
+### Fixed
+- Restored the viewer screen: v1.3.0 was published with an empty `MainActivity` and could not start.
+
+### Changed
+- The in-app updater now matches its documentation: update bar opens *What's new*, the download can be cancelled, and silent launch checks run at most every 6 hours while up to date.
+
 ## [1.3.0] - 2026-11-26
 
 ### Added

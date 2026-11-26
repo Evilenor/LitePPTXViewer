@@ -1,0 +1,437 @@
+package com.litepptx.viewer
+
+import android.app.Activity
+import android.content.Intent
+import android.net.Uri
+import android.os.Build
+import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
+import android.provider.OpenableColumns
+import android.view.View
+import android.view.WindowInsets
+import android.widget.AbsListView
+import android.widget.Button
+import android.widget.ImageButton
+import android.widget.PopupMenu
+import android.widget.ProgressBar
+import android.widget.TextView
+import android.widget.Toast
+import com.litepptx.viewer.pptx.Deck
+import com.litepptx.viewer.pptx.PptxParser
+import com.litepptx.viewer.update.Updater
+import java.io.File
+import java.util.concurrent.Executors
+import java.util.zip.ZipFile
+
+class MainActivity : Activity() {
+
+    private lateinit var tvFileName: TextView
+    private lateinit var tvSlideCounter: TextView
+    private lateinit var list: ZoomableListView
+    private lateinit var progressBar: ProgressBar
+    private lateinit var emptyState: View
+    private lateinit var updateBar: View
+    private lateinit var tvUpdate: TextView
+    private lateinit var btnUpdate: Button
+
+    private val net = Executors.newSingleThreadExecutor()
+    private var updInfo: Updater.Info? = null
+    private var updFile: File? = null
+    @Volatile private var updBusy = false
+    @Volatile private var updCancel = false
+
+    private val ui = Handler(Looper.getMainLooper())
+    private val io = Executors.newSingleThreadExecutor()
+    private var token = 0
+    private var currentUri: Uri? = null
+    private var deck: Deck? = null
+    private var adapter: SlideAdapter? = null
+    private var slideCount = 0
+
+    private val hideCounter = Runnable {
+        tvSlideCounter.animate().alpha(0f).setDuration(250).withEndAction {
+            tvSlideCounter.visibility = View.GONE
+        }.start()
+    }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_main)
+
+        tvFileName = findViewById(R.id.tvFileName)
+        tvSlideCounter = findViewById(R.id.tvSlideCounter)
+        list = findViewById(R.id.listSlides)
+        progressBar = findViewById(R.id.progressBar)
+        emptyState = findViewById(R.id.emptyState)
+        updateBar = findViewById(R.id.updateBar)
+        tvUpdate = findViewById(R.id.tvUpdate)
+        btnUpdate = findViewById(R.id.btnUpdate)
+        btnUpdate.setOnClickListener { onUpdateClick() }
+
+        // Edge-to-edge is enforced on Android 15, so keep the bars clear of system UI.
+        findViewById<View>(R.id.root).setOnApplyWindowInsetsListener { v, insets ->
+            if (Build.VERSION.SDK_INT >= 30) {
+                val i = insets.getInsets(WindowInsets.Type.systemBars() or WindowInsets.Type.displayCutout())
+                v.setPadding(i.left, i.top, i.right, i.bottom)
+            } else {
+                @Suppress("DEPRECATION")
+                v.setPadding(
+                    insets.systemWindowInsetLeft, insets.systemWindowInsetTop,
+                    insets.systemWindowInsetRight, insets.systemWindowInsetBottom
+                )
+            }
+            insets
+        }
+
+        findViewById<ImageButton>(R.id.btnBack).setOnClickListener { finish() }
+        findViewById<ImageButton>(R.id.btnMore).setOnClickListener { showMenu(it) }
+        findViewById<Button>(R.id.btnOpenFile).setOnClickListener { pickFile() }
+        findViewById<Button>(R.id.btnImagesPdf).setOnClickListener { openPdfMaker() }
+
+        list.setOnScrollListener(object : AbsListView.OnScrollListener {
+            override fun onScrollStateChanged(view: AbsListView, scrollState: Int) {}
+            override fun onScroll(view: AbsListView, first: Int, visible: Int, total: Int) {
+                if (slideCount == 0) return
+                val c0 = view.getChildAt(0) ?: return
+                var pos = first
+                if (c0.bottom < c0.height / 2) pos++
+                pos = pos.coerceIn(0, slideCount - 1)
+                showCounter("${pos + 1} / $slideCount")
+            }
+        })
+
+        // Remove files left behind by an earlier, killed process.
+        cacheDir.listFiles()?.forEach { if (it.name.startsWith("doc-")) it.delete() }
+
+        val saved = savedInstanceState?.getString("uri")
+        val uri = uriFrom(intent) ?: saved?.let { Uri.parse(it) }
+        if (uri != null) load(uri)
+
+        checkUpdate(false)
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        uriFrom(intent)?.let { load(it) }
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        currentUri?.let { outState.putString("uri", it.toString()) }
+    }
+
+    override fun onDestroy() {
+        token++
+        ui.removeCallbacksAndMessages(null)
+        adapter?.release()
+        deck?.close()
+        io.shutdownNow()
+        net.shutdownNow()
+        super.onDestroy()
+    }
+
+    // ------------------------------------------------------------------ intents
+
+    private fun uriFrom(i: Intent?): Uri? {
+        if (i == null) return null
+        if (i.action == Intent.ACTION_SEND) {
+            return if (Build.VERSION.SDK_INT >= 33) {
+                i.getParcelableExtra(Intent.EXTRA_STREAM, Uri::class.java)
+            } else {
+                @Suppress("DEPRECATION")
+                i.getParcelableExtra(Intent.EXTRA_STREAM) as? Uri
+            }
+        }
+        return i.data
+    }
+
+    private fun pickFile() {
+        val i = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+            addCategory(Intent.CATEGORY_OPENABLE)
+            type = "*/*"
+            putExtra(
+                Intent.EXTRA_MIME_TYPES,
+                arrayOf(
+                    "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+                    "application/octet-stream"
+                )
+            )
+        }
+        try {
+            startActivityForResult(i, REQ_OPEN)
+        } catch (_: Exception) {
+            Toast.makeText(this, R.string.error_loading, Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    @Deprecated("Deprecated in Java")
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == REQ_OPEN && resultCode == RESULT_OK) data?.data?.let { load(it) }
+    }
+
+    private fun showMenu(anchor: View) {
+        val popup = PopupMenu(this, anchor)
+        popup.menuInflater.inflate(R.menu.viewer_menu, popup.menu)
+        popup.setOnMenuItemClickListener { item ->
+            when (item.itemId) {
+                R.id.action_open -> { pickFile(); true }
+                R.id.action_images_pdf -> { openPdfMaker(); true }
+                R.id.action_check_update -> { checkUpdate(true); true }
+                R.id.action_share -> { share(); true }
+                R.id.action_reset_zoom -> { list.resetZoom(); true }
+                else -> false
+            }
+        }
+        popup.show()
+    }
+
+    private fun openPdfMaker() {
+        startActivity(Intent(this, PdfMakerActivity::class.java))
+    }
+
+    private fun share() {
+        val uri = currentUri ?: return
+        val send = Intent(Intent.ACTION_SEND).apply {
+            type = "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+            putExtra(Intent.EXTRA_STREAM, uri)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        try {
+            startActivity(Intent.createChooser(send, getString(R.string.menu_share)))
+        } catch (_: Exception) {
+        }
+    }
+
+    // ------------------------------------------------------------------ updates
+
+    /** Looks for a newer GitHub release. Silent on launch, reports the outcome when the user asked. */
+    private fun checkUpdate(manual: Boolean) {
+        if (updBusy) return
+        val prefs = getSharedPreferences("lite", MODE_PRIVATE)
+        // Silent launch checks run at most every 6 hours while the app is up to date.
+        if (!manual && System.currentTimeMillis() - prefs.getLong("upd_ok", 0L) < 6 * 3600_000L) return
+        try {
+            net.execute {
+                var info: Updater.Info? = null
+                var failed = false
+                try {
+                    info = Updater.check(this)
+                } catch (t: Throwable) {
+                    failed = true
+                }
+                val found = info
+                if (!failed && found == null) {
+                    prefs.edit().putLong("upd_ok", System.currentTimeMillis()).apply()
+                }
+                ui.post {
+                    if (isFinishing) return@post
+                    if (found != null) {
+                        showUpdate(found)
+                    } else if (manual) {
+                        val msg = if (failed) getString(R.string.update_check_failed)
+                        else getString(R.string.update_up_to_date, Updater.installedVersion(this))
+                        Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+        } catch (_: Exception) {
+        }
+    }
+
+    private fun showUpdate(info: Updater.Info) {
+        updInfo = info
+        updFile = null
+        tvUpdate.text = getString(R.string.update_available, info.version)
+        tvUpdate.setOnClickListener { showWhatsNew() }
+        btnUpdate.text = getString(R.string.update)
+        btnUpdate.isEnabled = true
+        updateBar.visibility = View.VISIBLE
+    }
+
+    private fun showWhatsNew() {
+        val info = updInfo ?: return
+        if (info.notes.isEmpty()) return
+        // Release notes are Markdown; show them as plain, lightly cleaned text.
+        val text = info.notes.replace(Regex("(?m)^#+\\s*"), "").replace("**", "").replace("`", "")
+        android.app.AlertDialog.Builder(this)
+            .setTitle("v${info.version}")
+            .setMessage(text)
+            .setPositiveButton(android.R.string.ok, null)
+            .show()
+    }
+
+    private fun onUpdateClick() {
+        val ready = updFile
+        if (ready != null) {
+            install(ready)
+            return
+        }
+        val info = updInfo ?: return
+        if (updBusy) {
+            updCancel = true
+            btnUpdate.isEnabled = false
+            return
+        }
+        updBusy = true
+        updCancel = false
+        btnUpdate.text = getString(R.string.update_cancel)
+        tvUpdate.text = getString(R.string.update_downloading, 0)
+        try {
+            net.execute {
+                var file: File? = null
+                try {
+                    file = Updater.download(
+                        this, info,
+                        { done, total ->
+                            val pct = if (total > 0) (done * 100 / total).toInt().coerceIn(0, 100) else 0
+                            ui.post { tvUpdate.text = getString(R.string.update_downloading, pct) }
+                        },
+                        { isFinishing || updCancel }
+                    )
+                } catch (t: Throwable) {
+                    android.util.Log.w("LitePPTX", "update download failed", t)
+                }
+                val done = file
+                ui.post {
+                    updBusy = false
+                    if (isFinishing) return@post
+                    if (done == null) {
+                        if (updCancel) {
+                            tvUpdate.text = getString(R.string.update_available, info.version)
+                        } else {
+                            tvUpdate.text = getString(R.string.update_failed)
+                        }
+                        btnUpdate.text = getString(R.string.update)
+                        btnUpdate.isEnabled = true
+                    } else {
+                        updFile = done
+                        tvUpdate.text = getString(R.string.update_ready, info.version)
+                        btnUpdate.text = getString(R.string.update_install)
+                        btnUpdate.isEnabled = true
+                        install(done)
+                    }
+                    updCancel = false
+                }
+            }
+        } catch (_: Exception) {
+            updBusy = false
+            btnUpdate.text = getString(R.string.update)
+        }
+    }
+
+    private fun install(f: File) {
+        if (!Updater.canInstall(this)) {
+            Toast.makeText(this, R.string.update_allow, Toast.LENGTH_LONG).show()
+            try {
+                startActivity(Updater.unknownSourcesIntent(this))
+            } catch (_: Exception) {
+            }
+            return
+        }
+        try {
+            startActivity(Updater.installIntent(f))
+        } catch (_: Exception) {
+            Toast.makeText(this, R.string.update_failed, Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    // ------------------------------------------------------------------ loading
+
+    private fun load(uri: Uri) {
+        val my = ++token
+        currentUri = uri
+        tvFileName.text = displayName(uri) ?: getString(R.string.app_name)
+        emptyState.visibility = View.GONE
+        progressBar.visibility = View.VISIBLE
+        tvSlideCounter.visibility = View.GONE
+
+        try {
+            io.execute {
+                var parsed: Deck? = null
+                try {
+                    // Copy to cache so slides/media can be read lazily with random access.
+                    val f = File(cacheDir, "doc-$my.pptx")
+                    val input = contentResolver.openInputStream(uri) ?: throw IllegalStateException()
+                    input.use { src -> f.outputStream().use { dst -> src.copyTo(dst, 64 * 1024) } }
+                    val zip = ZipFile(f)
+                    parsed = try {
+                        PptxParser(zip, f).parse()
+                    } catch (t: Throwable) {
+                        try { zip.close() } catch (_: Throwable) {}
+                        f.delete()
+                        throw t
+                    }
+                } catch (t: Throwable) {
+                    android.util.Log.w("LitePPTX", "load failed", t)
+                    parsed = null
+                }
+                val result = parsed
+                ui.post {
+                    if (my != token || isFinishing) {
+                        result?.close()
+                    } else if (result == null || result.slides.isEmpty()) {
+                        result?.close()
+                        showError()
+                    } else {
+                        show(result)
+                    }
+                }
+            }
+        } catch (_: Exception) {
+            showError()
+        }
+    }
+
+    private fun show(d: Deck) {
+        adapter?.release()
+        deck?.close()
+        deck = d
+        slideCount = d.slides.size
+        val width = (resources.displayMetrics.widthPixels * 1.3f).toInt().coerceIn(1080, 1600)
+        val a = SlideAdapter(this, d, width)
+        a.attach(list)
+        adapter = a
+        list.resetZoom()
+        list.adapter = a
+        list.setSelection(0)
+        progressBar.visibility = View.GONE
+        showCounter("1 / $slideCount")
+    }
+
+    private fun showError() {
+        progressBar.visibility = View.GONE
+        if (deck == null) emptyState.visibility = View.VISIBLE
+        Toast.makeText(this, R.string.error_loading, Toast.LENGTH_SHORT).show()
+    }
+
+    private fun showCounter(text: String) {
+        ui.removeCallbacks(hideCounter)
+        tvSlideCounter.animate().cancel()
+        tvSlideCounter.text = text
+        tvSlideCounter.alpha = 1f
+        tvSlideCounter.visibility = View.VISIBLE
+        ui.postDelayed(hideCounter, 1500)
+    }
+
+    private fun displayName(uri: Uri): String? {
+        if (uri.scheme == "content") {
+            try {
+                contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { c ->
+                    if (c.moveToFirst()) {
+                        val i = c.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+                        if (i >= 0) return c.getString(i)
+                    }
+                }
+            } catch (_: Exception) {
+            }
+        }
+        return uri.lastPathSegment
+    }
+
+    private companion object {
+        const val REQ_OPEN = 1001
+    }
+}

@@ -63,4 +63,5 @@
     <string name="update_allow">اجازه نصب از این برنامه را بدهید، سپس دوباره «نصب» را بزنید</string>
     <string name="whats_new">تغییرات نسخه %1$s</string>
     <string name="ok">باشه</string>
+    <string name="update_cancel">لغو</string>
 </resources>

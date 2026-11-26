@@ -63,4 +63,5 @@
     <string name="update_allow">Allow installs from this app, then tap Install again</string>
     <string name="whats_new">What is new in v%1$s</string>
     <string name="ok">OK</string>
+    <string name="update_cancel">Cancel</string>
 </resources>
