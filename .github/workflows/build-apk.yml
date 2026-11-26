@@ -1,8 +1,10 @@
-name: Build LitePPTXViewer APK
+name: Build & Release
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [ main ]
+    tags: [ 'v*' ]
+  pull_request:
   workflow_dispatch:
 
 permissions:
@@ -12,16 +14,16 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@v4
 
       - name: Set up JDK 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: Setup Gradle
+      - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
 
       - name: Restore release signing key (if configured)
@@ -43,21 +45,32 @@ jobs:
           chmod +x gradlew
           ./gradlew assembleRelease --no-daemon --console=plain
 
-      - name: Name the APK
-        run: cp app/build/outputs/apk/release/app-release.apk LitePPTXViewer.apk
+      - name: Name the APK and checksum it
+        run: |
+          cp app/build/outputs/apk/release/app-release.apk LitePPTXViewer.apk
+          sha256sum LitePPTXViewer.apk | tee LitePPTXViewer.apk.sha256
+          ls -l LitePPTXViewer.apk
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: LitePPTXViewer-APK
-          path: LitePPTXViewer.apk
+          path: |
+            LitePPTXViewer.apk
+            LitePPTXViewer.apk.sha256
 
-      - name: Publish rolling "latest" release
+      # Pushing a tag such as v1.3.0 publishes a GitHub Release. The in-app updater reads it.
+      - name: Publish release
+        if: startsWith(github.ref, 'refs/tags/v')
         env:
           GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
         run: |
-          gh release delete latest --cleanup-tag --yes || true
-          gh release create latest LitePPTXViewer.apk \
-            --title "LitePPTXViewer - latest build" \
-            --notes "Automated build of commit ${GITHUB_SHA::7}. Install LitePPTXViewer.apk on Android 5.0+." \
-            --target "$GITHUB_SHA"
+          NOTES="release-notes/${TAG}.md"
+          if [ -f "$NOTES" ]; then
+            gh release create "$TAG" LitePPTXViewer.apk LitePPTXViewer.apk.sha256 \
+              --title "LitePPTX ${TAG}" --notes-file "$NOTES" --verify-tag
+          else
+            gh release create "$TAG" LitePPTXViewer.apk LitePPTXViewer.apk.sha256 \
+              --title "LitePPTX ${TAG}" --generate-notes --verify-tag
+          fi

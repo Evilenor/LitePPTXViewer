@@ -50,4 +50,17 @@
     <string name="move_later">عقب‌تر</string>
     <string name="rotate">چرخاندن</string>
     <string name="remove">حذف</string>
+
+    <string name="menu_check_update">بررسی بروزرسانی</string>
+    <string name="update_available">بروزرسانی جدید · نسخه %1$s</string>
+    <string name="update">بروزرسانی</string>
+    <string name="update_install">نصب</string>
+    <string name="update_downloading">در حال دانلود بروزرسانی… %1$d%%</string>
+    <string name="update_ready">نسخه %1$s آماده نصب است</string>
+    <string name="update_up_to_date">برنامه شما به‌روز است (نسخه %1$s)</string>
+    <string name="update_check_failed">بررسی بروزرسانی ممکن نشد</string>
+    <string name="update_failed">دانلود بروزرسانی ناموفق بود</string>
+    <string name="update_allow">اجازه نصب از این برنامه را بدهید، سپس دوباره «نصب» را بزنید</string>
+    <string name="whats_new">تغییرات نسخه %1$s</string>
+    <string name="ok">باشه</string>
 </resources>

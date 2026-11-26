@@ -26,7 +26,8 @@ class PdfShareProvider : ContentProvider() {
     override fun openFile(uri: Uri, mode: String): ParcelFileDescriptor =
         ParcelFileDescriptor.open(fileFor(uri), ParcelFileDescriptor.MODE_READ_ONLY)
 
-    override fun getType(uri: Uri) = "application/pdf"
+    override fun getType(uri: Uri): String =
+        if (uri.lastPathSegment?.endsWith(".apk") == true) "application/vnd.android.package-archive" else "application/pdf"
 
     override fun query(
         uri: Uri, projection: Array<out String>?, selection: String?,

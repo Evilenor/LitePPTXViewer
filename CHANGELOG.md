@@ -1,0 +1,42 @@
+# Changelog
+
+All notable changes to LitePPTX. Versions follow [semantic versioning](https://semver.org/).
+Release notes for each version live in [`release-notes/`](release-notes/).
+
+## [1.3.0] - 2026-11-26
+
+### Added
+- **In-app updates.** The app checks GitHub Releases (at most every 6 hours, and on demand from the menu), shows an update bar, and downloads and installs the new build with one tap. The download is verified (size, SHA-256 and package identity) before Android's installer is opened.
+- "What's new" dialog: tap the update bar to read the release notes before updating.
+- Tagged releases: pushing a `v*` tag now builds, signs and publishes a GitHub Release with the APK and its SHA-256.
+
+### Changed
+- Releases are now versioned (`vX.Y.Z`) instead of a rolling `latest` build.
+- CI uses `actions/setup-java@v5` and builds pull requests as well.
+
+## [1.2.0] - 2026-11-26
+
+### Added
+- **Images to PDF**: pick photos in the gallery, tap *Share > Create PDF* (or use the in-app button), reorder / rotate / remove pages, then share, save to Downloads or open the result.
+- Page size (Fit / A4 / Letter), margins (None / Small / Normal) and four quality presets (Original, High, Smart, Small).
+- Lossless pipeline: JPEGs are embedded byte-for-byte whenever possible, PNG screenshots are stored losslessly, EXIF orientation is honoured.
+- New launcher icon (adaptive) and an app shortcut for Images to PDF.
+
+## [1.1.0] - 2026-11-25
+
+### Fixed
+- Pictures and picture backgrounds were never drawn (relationship attribute lookup).
+- Errors are logged instead of silently swallowed.
+
+### Changed
+- Release APKs are signed with a fixed key, so updates install over older versions.
+
+## [1.0.0] - 2026-11-25
+
+### Added
+- First release: a dependency-free PowerPoint (`.pptx`) viewer for Android 5.0+ with master/layout inheritance, shapes, tables, gradients, bullets, right-to-left text, pinch-to-zoom and a page counter.
+
+[1.3.0]: https://github.com/Evilenor/LitePPTXViewer/releases/tag/v1.3.0
+[1.2.0]: https://github.com/Evilenor/LitePPTXViewer/commits/main
+[1.1.0]: https://github.com/Evilenor/LitePPTXViewer/commits/main
+[1.0.0]: https://github.com/Evilenor/LitePPTXViewer/commits/main
