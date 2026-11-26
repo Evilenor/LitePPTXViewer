@@ -35,6 +35,65 @@ object Updater {
 
     class Cancelled : IOException("cancelled")
 
+    // ---- persistence: what we know about a pending update survives restarts ----
+
+    private fun prefs(ctx: Context) = ctx.getSharedPreferences("lite", Context.MODE_PRIVATE)
+
+    /** Downloaded updates live here, away from the cache/pdf folder that other screens tidy up. */
+    fun updateDir(ctx: Context): File = File(ctx.filesDir, "update").apply { mkdirs() }
+
+    fun savePending(ctx: Context, i: Info) {
+        prefs(ctx).edit()
+            .putString("upd_ver", i.version).putString("upd_notes", i.notes)
+            .putString("upd_url", i.apkUrl).putLong("upd_size", i.size)
+            .putString("upd_sha", i.sha256).putString("upd_page", i.pageUrl)
+            .apply()
+    }
+
+    fun loadPending(ctx: Context): Info? {
+        val p = prefs(ctx)
+        val v = p.getString("upd_ver", null) ?: return null
+        val url = p.getString("upd_url", null) ?: return null
+        return Info(
+            version = v, notes = p.getString("upd_notes", "") ?: "", apkUrl = url,
+            size = p.getLong("upd_size", -1), sha256 = p.getString("upd_sha", null),
+            pageUrl = p.getString("upd_page", "") ?: ""
+        )
+    }
+
+    fun clearPending(ctx: Context) {
+        prefs(ctx).edit().remove("upd_ver").remove("upd_notes").remove("upd_url")
+            .remove("upd_size").remove("upd_sha").remove("upd_page").apply()
+    }
+
+    /** The APK we already downloaded for [info], if it is still there and still valid. Otherwise null. */
+    fun readyFile(ctx: Context, info: Info): File? {
+        val f = File(updateDir(ctx), "LitePPTX-${info.version}.apk")
+        if (!f.isFile) return null
+        if (info.size > 0 && f.length() != info.size) { f.delete(); return null }
+        @Suppress("DEPRECATION")
+        val pi = ctx.packageManager.getPackageArchiveInfo(f.path, 0)
+        if (pi == null || pi.packageName != ctx.packageName ||
+            compare(pi.versionName ?: "0", installedVersion(ctx)) <= 0
+        ) { f.delete(); return null }
+        return f
+    }
+
+    /** After an update was installed: forget it and delete leftover files for versions we already have. */
+    fun cleanup(ctx: Context) {
+        val cur = installedVersion(ctx)
+        val p = loadPending(ctx)
+        if (p != null && compare(p.version, cur) <= 0) clearPending(ctx)
+        updateDir(ctx).listFiles()?.forEach { f ->
+            val v = f.name.removePrefix("LitePPTX-").removeSuffix(".part").removeSuffix(".apk")
+            if (compare(v, cur) <= 0) f.delete()
+        }
+        // Older builds stored the APK in cache/pdf.
+        File(ctx.cacheDir, "pdf").listFiles()?.forEach {
+            if (it.name.startsWith("LitePPTX-") && (it.name.endsWith(".apk") || it.name.endsWith(".part"))) it.delete()
+        }
+    }
+
     fun installedVersion(ctx: Context): String = try {
         ctx.packageManager.getPackageInfo(ctx.packageName, 0).versionName ?: "0"
     } catch (_: Exception) {
@@ -79,10 +138,13 @@ object Updater {
         progress: (done: Long, total: Long) -> Unit,
         cancelled: () -> Boolean
     ): File {
-        val dir = File(ctx.cacheDir, "pdf").apply { mkdirs() }
-        dir.listFiles()?.forEach { if (it.name.endsWith(".apk") || it.name.endsWith(".part")) it.delete() }
+        val dir = updateDir(ctx)
+        dir.listFiles()?.forEach {
+            if (it.name.endsWith(".part") || (it.name.endsWith(".apk") && it.name != "LitePPTX-${info.version}.apk")) it.delete()
+        }
         val part = File(dir, "LitePPTX-${info.version}.apk.part")
         val out = File(dir, "LitePPTX-${info.version}.apk")
+        out.delete()
         val md = MessageDigest.getInstance("SHA-256")
         val c = open(info.apkUrl)
         try {

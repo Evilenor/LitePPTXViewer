@@ -47,6 +47,18 @@
             android:background="?android:attr/selectableItemBackgroundBorderless"
             android:contentDescription="@string/more_options"
             android:src="@drawable/ic_more_horiz" />
+
+        <!-- Stays on while an update is waiting (available, downloading or ready to install). -->
+        <View
+            android:id="@+id/moreBadge"
+            android:layout_width="12dp"
+            android:layout_height="12dp"
+            android:layout_alignTop="@id/btnMore"
+            android:layout_alignEnd="@id/btnMore"
+            android:layout_marginTop="6dp"
+            android:layout_marginEnd="6dp"
+            android:background="@drawable/bg_badge_dot"
+            android:visibility="gone" />
     </RelativeLayout>
 
     <LinearLayout

@@ -52,6 +52,8 @@
     <string name="remove">Remove</string>
 
     <string name="menu_check_update">Check for updates</string>
+    <string name="menu_get_update">Update to v%1$s</string>
+    <string name="menu_install_update">Install v%1$s</string>
     <string name="update_available">Update available · v%1$s</string>
     <string name="update">Update</string>
     <string name="update_install">Install</string>
@@ -60,7 +62,7 @@
     <string name="update_up_to_date">You are up to date (v%1$s)</string>
     <string name="update_check_failed">Could not check for updates</string>
     <string name="update_failed">Update download failed</string>
-    <string name="update_allow">Allow installs from this app, then tap Install again</string>
+    <string name="update_allow">Allow installs from this app, then come back and the install continues</string>
     <string name="whats_new">What is new in v%1$s</string>
     <string name="ok">OK</string>
     <string name="update_cancel">Cancel</string>

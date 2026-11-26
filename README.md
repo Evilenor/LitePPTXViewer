@@ -40,7 +40,7 @@ Opening a `.pptx` someone sent you in a chat shouldn't need a 300&nbsp;MB office
 | **Tiny** | The release APK is about 130&nbsp;KB. Only Android platform APIs are used. There is not a single third-party library. |
 | **Fast** | Slides are rendered lazily, only when they scroll into view, and cached. Opening a deck takes about a second on an emulator. |
 | **Private** | No analytics, no ads, no permissions to read your files. Your documents never leave the phone. |
-| **Self-updating** | One tap in the app downloads, verifies and installs new releases. |
+| **Self-updating** | The app notices new releases by itself and keeps a dot on the **⋯** button until you update. Download once: it is remembered, verified, and offered for install even after you close the app. |
 | **Bilingual** | English and Persian UI, with proper right-to-left text rendering in slides. |
 
 ## Features
@@ -87,6 +87,8 @@ In our emulator test (a 4000×3000 photo, a small JPEG and a text-heavy PNG scre
 ### Updates
 - Checks GitHub Releases at most every 6 hours (and on demand from **⋯ > Check for updates**).
 - Tap the update bar to read *What's new*, then **Update**.
+- Until you update, a red dot stays on the **⋯** button and the menu entry reads *Update to v…* or *Install v…*.
+- A finished download is remembered: even after you close the app or go offline, the bar comes back as "ready to install" and you do not have to download again.
 - The APK is verified (size, SHA-256, package identity) before Android's installer opens, and Android refuses anything not signed with the same key.
 
 ## Install

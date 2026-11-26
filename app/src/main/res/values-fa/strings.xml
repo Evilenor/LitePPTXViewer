@@ -52,6 +52,8 @@
     <string name="remove">حذف</string>
 
     <string name="menu_check_update">بررسی بروزرسانی</string>
+    <string name="menu_get_update">بروزرسانی به نسخه %1$s</string>
+    <string name="menu_install_update">نصب نسخه %1$s</string>
     <string name="update_available">بروزرسانی جدید · نسخه %1$s</string>
     <string name="update">بروزرسانی</string>
     <string name="update_install">نصب</string>
@@ -60,7 +62,7 @@
     <string name="update_up_to_date">برنامه شما به‌روز است (نسخه %1$s)</string>
     <string name="update_check_failed">بررسی بروزرسانی ممکن نشد</string>
     <string name="update_failed">دانلود بروزرسانی ناموفق بود</string>
-    <string name="update_allow">اجازه نصب از این برنامه را بدهید، سپس دوباره «نصب» را بزنید</string>
+    <string name="update_allow">اجازه نصب از این برنامه را بدهید و برگردید؛ نصب ادامه پیدا می‌کند</string>
     <string name="whats_new">تغییرات نسخه %1$s</string>
     <string name="ok">باشه</string>
     <string name="update_cancel">لغو</string>

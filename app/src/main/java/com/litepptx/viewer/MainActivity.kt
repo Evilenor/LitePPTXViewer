@@ -37,7 +37,7 @@ class MainActivity : Activity() {
     private lateinit var updateBar: View
     private lateinit var tvUpdate: TextView
     private lateinit var btnUpdate: Button
-
+    private lateinit var moreBadge: View
     private val net = Executors.newSingleThreadExecutor()
     private val exportPool = Executors.newSingleThreadExecutor()
     @Volatile private var exportBusy = false
@@ -46,6 +46,8 @@ class MainActivity : Activity() {
     private var updInfo: Updater.Info? = null
     private var updFile: File? = null
     @Volatile private var updBusy = false
+    @Volatile private var updChecking = false
+    private var pendingInstall = false
     @Volatile private var updCancel = false
 
     private lateinit var donateCard: View
@@ -96,6 +98,7 @@ class MainActivity : Activity() {
         updateBar = findViewById(R.id.updateBar)
         tvUpdate = findViewById(R.id.tvUpdate)
         btnUpdate = findViewById(R.id.btnUpdate)
+        moreBadge = findViewById(R.id.moreBadge)
         btnUpdate.setOnClickListener { onUpdateClick() }
         donateCard = findViewById(R.id.donateCard)
         ivHeart = findViewById(R.id.ivHeart)
@@ -141,7 +144,10 @@ class MainActivity : Activity() {
         val uri = uriFrom(intent) ?: saved?.let { Uri.parse(it) }
         if (uri != null) load(uri)
 
-        checkUpdate(false)
+        // Show a known pending update straight away (and a finished download), then let onResume
+        // look for a newer one. Nothing is forgotten when the app is closed.
+        Updater.cleanup(this)
+        Updater.loadPending(this)?.let { showUpdate(it) }
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -159,6 +165,14 @@ class MainActivity : Activity() {
         super.onResume()
         ui.removeCallbacks(heartbeat)
         ui.postDelayed(heartbeat, 900)
+        // Back from Android's "allow installs from this app" screen: carry on with the install.
+        val ready = updFile
+        if (pendingInstall && ready != null && Updater.canInstall(this)) {
+            pendingInstall = false
+            install(ready)
+        } else {
+            checkUpdate(false)
+        }
     }
 
     override fun onPause() {
@@ -237,13 +251,19 @@ class MainActivity : Activity() {
     private fun showMenu(anchor: View) {
         val popup = PopupMenu(this, anchor)
         popup.menuInflater.inflate(R.menu.viewer_menu, popup.menu)
+        // While an update is waiting, the menu entry becomes the action itself.
+        updInfo?.let { u ->
+            popup.menu.findItem(R.id.action_check_update)?.title = getString(
+                if (updFile != null) R.string.menu_install_update else R.string.menu_get_update, u.version
+            )
+        }
         popup.setOnMenuItemClickListener { item ->
             when (item.itemId) {
                 R.id.action_open -> { pickFile(); true }
                 R.id.action_images_pdf -> { openPdfMaker(); true }
                 R.id.action_scan -> { openScanner(); true }
                 R.id.action_export_pdf -> { exportPdf(); true }
-                R.id.action_check_update -> { checkUpdate(true); true }
+                R.id.action_check_update -> { if (updInfo != null) onUpdateClick() else checkUpdate(true); true }
                 R.id.action_donate -> { openDonate(); true }
                 R.id.action_share -> { share(); true }
                 R.id.action_reset_zoom -> { list.resetZoom(); true }
@@ -371,10 +391,11 @@ class MainActivity : Activity() {
 
     /** Looks for a newer GitHub release. Silent on launch, reports the outcome when the user asked. */
     private fun checkUpdate(manual: Boolean) {
-        if (updBusy) return
+        if (updBusy || updChecking) return
         val prefs = getSharedPreferences("lite", MODE_PRIVATE)
-        // Silent launch checks run at most every 6 hours while the app is up to date.
-        if (!manual && System.currentTimeMillis() - prefs.getLong("upd_ok", 0L) < 6 * 3600_000L) return
+        // Silent checks (on launch and when coming back to the app) run at most every 6 hours.
+        if (!manual && System.currentTimeMillis() - prefs.getLong("upd_check", 0L) < 6 * 3600_000L) return
+        updChecking = true
         try {
             net.execute {
                 var info: Updater.Info? = null
@@ -385,14 +406,23 @@ class MainActivity : Activity() {
                     failed = true
                 }
                 val found = info
-                if (!failed && found == null) {
-                    prefs.edit().putLong("upd_ok", System.currentTimeMillis()).apply()
+                if (!failed) {
+                    prefs.edit().putLong("upd_check", System.currentTimeMillis()).apply()
+                    if (found != null) Updater.savePending(this, found) else Updater.clearPending(this)
                 }
                 ui.post {
-                    if (isFinishing) return@post
+                    updChecking = false
+                    if (isFinishing || updBusy) return@post
                     if (found != null) {
                         showUpdate(found)
-                    } else if (manual) {
+                    } else if (!failed) {
+                        // Nothing newer than what is installed: drop any stale bar.
+                        updInfo = null
+                        updFile = null
+                        updateBar.visibility = View.GONE
+                        moreBadge.visibility = View.GONE
+                    }
+                    if (found == null && manual) {
                         val msg = if (failed) getString(R.string.update_check_failed)
                         else getString(R.string.update_up_to_date, Updater.installedVersion(this))
                         Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
@@ -400,17 +430,27 @@ class MainActivity : Activity() {
                 }
             }
         } catch (_: Exception) {
+            updChecking = false
         }
     }
 
+    /** Shows the update bar: "Update" when it still has to be downloaded, "Install" when it is already on the phone. */
     private fun showUpdate(info: Updater.Info) {
+        if (updInfo?.version != info.version || updFile == null) {
+            updFile = Updater.readyFile(this, info)
+        }
         updInfo = info
-        updFile = null
-        tvUpdate.text = getString(R.string.update_available, info.version)
         tvUpdate.setOnClickListener { showWhatsNew() }
-        btnUpdate.text = getString(R.string.update)
+        if (updFile != null) {
+            tvUpdate.text = getString(R.string.update_ready, info.version)
+            btnUpdate.text = getString(R.string.update_install)
+        } else {
+            tvUpdate.text = getString(R.string.update_available, info.version)
+            btnUpdate.text = getString(R.string.update)
+        }
         btnUpdate.isEnabled = true
         updateBar.visibility = View.VISIBLE
+        moreBadge.visibility = View.VISIBLE
     }
 
     private fun showWhatsNew() {
@@ -428,9 +468,14 @@ class MainActivity : Activity() {
 
     private fun onUpdateClick() {
         val ready = updFile
-        if (ready != null) {
+        if (ready != null && ready.isFile) {
             install(ready)
             return
+        }
+        if (ready != null) {
+            // The saved APK is gone (storage cleaned): go back to "Update" and download again.
+            updFile = null
+            updInfo?.let { showUpdate(it) }
         }
         val info = updInfo ?: return
         if (updBusy) {
@@ -487,6 +532,7 @@ class MainActivity : Activity() {
 
     private fun install(f: File) {
         if (!Updater.canInstall(this)) {
+            pendingInstall = true
             Toast.makeText(this, R.string.update_allow, Toast.LENGTH_LONG).show()
             try {
                 startActivity(Updater.unknownSourcesIntent(this))

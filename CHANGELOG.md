@@ -3,6 +3,17 @@
 All notable changes to LitePPTX. Versions follow [semantic versioning](https://semver.org/).
 Release notes for each version live in [`release-notes/`](release-notes/).
 
+## [1.4.1] - 2026-11-26
+
+### Added
+- A red dot on the **⋯** button while an update is waiting, so you notice it on any screen state.
+- The menu entry turns into **Update to v…** / **Install v…** while an update is pending.
+
+### Changed
+- A downloaded update is remembered. If you close the app, go offline or cancel Android's installer, the bar comes back as "ready to install" and the APK is not downloaded again. Downloads are stored where cache clean-ups cannot delete them.
+- If the saved APK has disappeared, the button goes back to **Update** and downloads it again.
+- After you allow installs from LitePPTX in Android settings, coming back to the app continues the install.
+
 ## [1.4.0] - 2026-11-26
 
 ### Added

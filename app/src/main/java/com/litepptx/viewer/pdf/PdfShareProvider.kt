@@ -18,7 +18,10 @@ class PdfShareProvider : ContentProvider() {
     private fun fileFor(uri: Uri): File {
         val name = uri.lastPathSegment ?: throw FileNotFoundException()
         if (name.contains('/') || name.contains('\\') || name.contains("..")) throw FileNotFoundException()
-        val f = File(File(context!!.cacheDir, "pdf"), name)
+        val ctx = context!!
+        var f = File(File(ctx.cacheDir, "pdf"), name)
+        // Downloaded updates live in files/update so the cache clean-ups elsewhere never delete them.
+        if (!f.isFile && name.endsWith(".apk")) f = File(File(ctx.filesDir, "update"), name)
         if (!f.isFile) throw FileNotFoundException()
         return f
     }
