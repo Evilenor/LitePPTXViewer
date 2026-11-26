@@ -7,7 +7,7 @@
 **نمایشگر فوق‌سبک پاورپوینت و سازنده PDF از عکس برای اندروید**
 زیر ۱۰۰ کیلوبایت · بدون هیچ کتابخانه‌ی خارجی · بدون تبلیغ، حساب کاربری و ردیابی
 
-[**دانلود APK**](https://github.com/Evilenor/LitePPTXViewer/releases/latest) · [Changelog](CHANGELOG.md) · [English](README.md)
+[**دانلود APK**](https://github.com/Evilenor/LitePPTXViewer/releases/latest) · [Changelog](CHANGELOG.md) · [♥ حمایت](https://the-evilenor.vercel.app/support) · [English](README.md)
 
 <img src="docs/images/showcase.png" alt="تصاویر برنامه" width="100%">
 
@@ -81,7 +81,7 @@
 
 ## حریم خصوصی
 
-تنها ترافیک شبکه‌ی برنامه بررسی بروزرسانی (`api.github.com`) و دانلود APK هنگام زدن دکمه‌ی بروزرسانی است. فایل‌هایی که باز یا تبدیل می‌کنید روی خود گوشی پردازش می‌شوند. مجوزها: `INTERNET` (بروزرسانی) و `REQUEST_INSTALL_PACKAGES` (برای سپردن نسخه‌ی بررسی‌شده به نصب‌کننده‌ی اندروید).
+تنها ترافیک شبکه‌ی برنامه بررسی بروزرسانی (`api.github.com`) و دانلود APK هنگام زدن دکمه‌ی بروزرسانی است. فایل‌هایی که باز یا تبدیل می‌کنید روی خود گوشی پردازش می‌شوند. دکمه‌ی **حمایت** فقط صفحه‌ی حمایت را در مرورگر شما باز می‌کند و خود برنامه چیزی ارسال نمی‌کند. مجوزها: `INTERNET` (بروزرسانی) و `REQUEST_INSTALL_PACKAGES` (برای سپردن نسخه‌ی بررسی‌شده به نصب‌کننده‌ی اندروید).
 
 ## ساخت از روی سورس
 
@@ -90,6 +90,18 @@ git clone https://github.com/Evilenor/LitePPTXViewer.git
 cd LitePPTXViewer
 ./gradlew assembleRelease   # JDK 17 و Android SDK (platform 35)
 ```
+
+## حمایت از LitePPTX ♥
+
+LitePPTX رایگان، متن‌باز و بدون تبلیغ است و همین‌طور می‌ماند. اگر وقتتان را گرفته یا کارتان را راه انداخته، حمایت شما باعث می‌شود نگهداری‌اش ادامه پیدا کند و بتوانم ابزارهای کوچک و صادقانه‌ی بیشتری بسازم.
+
+<div align="center">
+
+[**♥ حمایت از LitePPTX · the-evilenor.vercel.app/support**](https://the-evilenor.vercel.app/support)
+
+</div>
+
+داخل خود برنامه هم یک ضربه تا آن فاصله است: کارت **حمایت** در صفحه‌ی اول و **⋯ ← حمایت از برنامه ♥**. اگر نمی‌توانید حمایت مالی کنید، ستاره دادن به ریپو، معرفی به دوستان یا گزارش باگ هم همین‌قدر کمک می‌کند.
 
 ## مجوز
 

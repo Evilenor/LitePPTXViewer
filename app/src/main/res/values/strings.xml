@@ -64,4 +64,8 @@
     <string name="whats_new">What is new in v%1$s</string>
     <string name="ok">OK</string>
     <string name="update_cancel">Cancel</string>
+    <string name="donate_title">Support LitePPTX</string>
+    <string name="donate_sub">Free, ad-free and tiny. A donation keeps it that way.</string>
+    <string name="donate_cta">Donate</string>
+    <string name="menu_donate">Donate ♥</string>
 </resources>

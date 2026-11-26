@@ -14,4 +14,7 @@
     <item
         android:id="@+id/action_reset_zoom"
         android:title="@string/menu_reset_zoom" />
+    <item
+        android:id="@+id/action_donate"
+        android:title="@string/menu_donate" />
 </menu>

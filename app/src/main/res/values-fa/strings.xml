@@ -64,4 +64,8 @@
     <string name="whats_new">تغییرات نسخه %1$s</string>
     <string name="ok">باشه</string>
     <string name="update_cancel">لغو</string>
+    <string name="donate_title">حمایت از LitePPTX</string>
+    <string name="donate_sub">رایگان، بدون تبلیغ و کم‌حجم. حمایت شما همین‌طور نگهش می‌دارد.</string>
+    <string name="donate_cta">حمایت</string>
+    <string name="menu_donate">حمایت از برنامه ♥</string>
 </resources>

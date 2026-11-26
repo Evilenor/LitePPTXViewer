@@ -3,6 +3,15 @@
 All notable changes to LitePPTX. Versions follow [semantic versioning](https://semver.org/).
 Release notes for each version live in [`release-notes/`](release-notes/).
 
+## [1.3.2] - 2026-11-26
+
+### Added
+- **Donate** card on the start screen (heart with a soft heartbeat) and a **Donate ♥** menu entry. Both open the support page in the browser; the app sends nothing.
+- Support link in the English and Persian READMEs and in the release notes.
+
+### Changed
+- *What's new* dialog shows Markdown links as plain text and uses the localized title.
+
 ## [1.3.1] - 2026-11-26
 
 ### Fixed

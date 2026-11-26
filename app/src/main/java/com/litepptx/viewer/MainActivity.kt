@@ -41,6 +41,28 @@ class MainActivity : Activity() {
     @Volatile private var updBusy = false
     @Volatile private var updCancel = false
 
+    private lateinit var donateCard: View
+    private lateinit var ivHeart: View
+
+    /** A slow double-beat on the heart, only while the start screen is visible. */
+    private val heartbeat = object : Runnable {
+        override fun run() {
+            if (isFinishing || !donateCard.isShown) {
+                ui.postDelayed(this, 1500)
+                return
+            }
+            ivHeart.animate().scaleX(1.22f).scaleY(1.22f).setDuration(260).withEndAction {
+                ivHeart.animate().scaleX(1f).scaleY(1f).setDuration(260).withEndAction {
+                    ivHeart.animate().scaleX(1.12f).scaleY(1.12f).setDuration(200).withEndAction {
+                        ivHeart.animate().scaleX(1f).scaleY(1f).setDuration(300).withEndAction {
+                            ui.postDelayed(this, 1400)
+                        }.start()
+                    }.start()
+                }.start()
+            }.start()
+        }
+    }
+
     private val ui = Handler(Looper.getMainLooper())
     private val io = Executors.newSingleThreadExecutor()
     private var token = 0
@@ -68,6 +90,9 @@ class MainActivity : Activity() {
         tvUpdate = findViewById(R.id.tvUpdate)
         btnUpdate = findViewById(R.id.btnUpdate)
         btnUpdate.setOnClickListener { onUpdateClick() }
+        donateCard = findViewById(R.id.donateCard)
+        ivHeart = findViewById(R.id.ivHeart)
+        donateCard.setOnClickListener { openDonate() }
 
         // Edge-to-edge is enforced on Android 15, so keep the bars clear of system UI.
         findViewById<View>(R.id.root).setOnApplyWindowInsetsListener { v, insets ->
@@ -120,6 +145,20 @@ class MainActivity : Activity() {
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
         currentUri?.let { outState.putString("uri", it.toString()) }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        ui.removeCallbacks(heartbeat)
+        ui.postDelayed(heartbeat, 900)
+    }
+
+    override fun onPause() {
+        ui.removeCallbacks(heartbeat)
+        ivHeart.animate().cancel()
+        ivHeart.scaleX = 1f
+        ivHeart.scaleY = 1f
+        super.onPause()
     }
 
     override fun onDestroy() {
@@ -180,6 +219,7 @@ class MainActivity : Activity() {
                 R.id.action_open -> { pickFile(); true }
                 R.id.action_images_pdf -> { openPdfMaker(); true }
                 R.id.action_check_update -> { checkUpdate(true); true }
+                R.id.action_donate -> { openDonate(); true }
                 R.id.action_share -> { share(); true }
                 R.id.action_reset_zoom -> { list.resetZoom(); true }
                 else -> false
@@ -190,6 +230,15 @@ class MainActivity : Activity() {
 
     private fun openPdfMaker() {
         startActivity(Intent(this, PdfMakerActivity::class.java))
+    }
+
+    /** Opens the support page in the browser. The app itself sends nothing. */
+    private fun openDonate() {
+        try {
+            startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(DONATE_URL)))
+        } catch (_: Exception) {
+            Toast.makeText(this, DONATE_URL, Toast.LENGTH_LONG).show()
+        }
     }
 
     private fun share() {
@@ -256,10 +305,11 @@ class MainActivity : Activity() {
         if (info.notes.isEmpty()) return
         // Release notes are Markdown; show them as plain, lightly cleaned text.
         val text = info.notes.replace(Regex("(?m)^#+\\s*"), "").replace("**", "").replace("`", "")
+            .replace(Regex("\\[([^\\]]+)\\]\\(([^)]+)\\)"), "$1")
         android.app.AlertDialog.Builder(this)
-            .setTitle("v${info.version}")
+            .setTitle(getString(R.string.whats_new, info.version))
             .setMessage(text)
-            .setPositiveButton(android.R.string.ok, null)
+            .setPositiveButton(R.string.ok, null)
             .show()
     }
 
@@ -433,5 +483,6 @@ class MainActivity : Activity() {
 
     private companion object {
         const val REQ_OPEN = 1001
+        const val DONATE_URL = "https://the-evilenor.vercel.app/support"
     }
 }

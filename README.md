@@ -15,11 +15,13 @@
   <img alt="Android 5.0+" src="https://img.shields.io/badge/Android-5.0%2B-3DDC84?style=flat-square">
   <img alt="Dependencies: 0" src="https://img.shields.io/badge/dependencies-0-success?style=flat-square">
   <a href="LICENSE"><img alt="MIT license" src="https://img.shields.io/badge/license-MIT-lightgrey?style=flat-square"></a>
+  <a href="https://the-evilenor.vercel.app/support"><img alt="Donate" src="https://img.shields.io/badge/%E2%99%A5%20donate-keep%20it%20free-ff4d6d?style=flat-square"></a>
 </p>
 
 <p align="center">
   <a href="https://github.com/Evilenor/LitePPTXViewer/releases/latest"><b>Download the APK</b></a> ·
   <a href="CHANGELOG.md">Changelog</a> ·
+  <a href="https://the-evilenor.vercel.app/support">♥ Support</a> ·
   <a href="README.fa.md">فارسی</a>
 </p>
 
@@ -103,7 +105,7 @@ Rendering fidelity has been checked on an Android 15 emulator with test decks; r
 
 ## Privacy
 
-LitePPTX has no analytics and no ads. Its only network traffic is the update check (`GET api.github.com/.../releases/latest`) and, when you tap Update, the APK download from GitHub. Files you open or convert are processed on the device. Declared permissions: `INTERNET` (updates) and `REQUEST_INSTALL_PACKAGES` (to hand the verified update to Android's installer).
+LitePPTX has no analytics and no ads. Its only network traffic is the update check (`GET api.github.com/.../releases/latest`) and, when you tap Update, the APK download from GitHub. Files you open or convert are processed on the device. The **Donate** button only opens the support page in your browser; the app itself sends nothing. Declared permissions: `INTERNET` (updates) and `REQUEST_INSTALL_PACKAGES` (to hand the verified update to Android's installer).
 
 ## Build from source
 
@@ -137,6 +139,16 @@ git tag vX.Y.Z && git push origin vX.Y.Z
 ```
 
 The workflow signs the APK with the key stored in repository secrets and attaches `LitePPTXViewer.apk` and its `.sha256` to the release; the in-app updater picks it up from there.
+
+## Support LitePPTX ♥
+
+LitePPTX is free, open source and ad-free, and it will stay that way. If it saved you time, a donation keeps it maintained and lets me keep building small, honest tools.
+
+<p align="center">
+  <a href="https://the-evilenor.vercel.app/support"><img src="https://img.shields.io/badge/%E2%99%A5%20Support%20LitePPTX-the--evilenor.vercel.app%2Fsupport-ff4d6d?style=for-the-badge" alt="Support LitePPTX: the-evilenor.vercel.app/support"></a>
+</p>
+
+It is also one tap away inside the app: the **Donate** card on the start screen and **⋯ → Donate ♥**. Can't donate? Starring the repo, sharing it with a friend or reporting a bug helps just as much.
 
 ## License
 
