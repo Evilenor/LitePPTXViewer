@@ -73,6 +73,7 @@ class MainActivity : Activity() {
         findViewById<ImageButton>(R.id.btnBack).setOnClickListener { finish() }
         findViewById<ImageButton>(R.id.btnMore).setOnClickListener { showMenu(it) }
         findViewById<Button>(R.id.btnOpenFile).setOnClickListener { pickFile() }
+        findViewById<Button>(R.id.btnImagesPdf).setOnClickListener { openPdfMaker() }
 
         list.setOnScrollListener(object : AbsListView.OnScrollListener {
             override fun onScrollStateChanged(view: AbsListView, scrollState: Int) {}
@@ -160,12 +161,17 @@ class MainActivity : Activity() {
         popup.setOnMenuItemClickListener { item ->
             when (item.itemId) {
                 R.id.action_open -> { pickFile(); true }
+                R.id.action_images_pdf -> { openPdfMaker(); true }
                 R.id.action_share -> { share(); true }
                 R.id.action_reset_zoom -> { list.resetZoom(); true }
                 else -> false
             }
         }
         popup.show()
+    }
+
+    private fun openPdfMaker() {
+        startActivity(Intent(this, PdfMakerActivity::class.java))
     }
 
     private fun share() {

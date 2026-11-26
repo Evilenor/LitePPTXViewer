@@ -1,8 +1,10 @@
-<?xml version="1.0" encoding="utf-8"?>
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
     <item
         android:id="@+id/action_open"
         android:title="@string/menu_open_another" />
+    <item
+        android:id="@+id/action_images_pdf"
+        android:title="@string/menu_images_pdf" />
     <item
         android:id="@+id/action_share"
         android:title="@string/menu_share" />

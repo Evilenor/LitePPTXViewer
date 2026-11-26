@@ -10,3 +10,7 @@
 ## ساخت دستی در کامپیوتر (Android Studio)
 1. پوشه `LitePPTXViewer` را در **Android Studio** باز کنید.
 2. از منو گزینه `Build > Build Bundle(s) / APK(s) > Build APK(s)` را بزنید.
+
+## Images to PDF (v1.2)
+
+Select photos in the gallery, tap Share > **Create PDF** (or use the in-app button). Reorder, rotate, remove pages; choose Fit/A4/Letter, margins and quality (Original / High / Smart / Small). JPEGs are embedded byte-for-byte when possible, PNG screenshots stay lossless, and no PDF library is used.

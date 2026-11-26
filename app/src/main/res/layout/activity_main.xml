@@ -127,6 +127,18 @@
                 android:textAllCaps="false"
                 android:textColor="@color/white"
                 android:textSize="14sp" />
+            <Button
+                android:id="@+id/btnImagesPdf"
+                android:layout_width="wrap_content"
+                android:layout_height="44dp"
+                android:layout_marginTop="10dp"
+                android:background="@drawable/bg_btn_secondary"
+                android:paddingStart="24dp"
+                android:paddingEnd="24dp"
+                android:text="@string/menu_images_pdf"
+                android:textAllCaps="false"
+                android:textColor="@color/white"
+                android:textSize="14sp" />
         </LinearLayout>
     </FrameLayout>
 </LinearLayout>
