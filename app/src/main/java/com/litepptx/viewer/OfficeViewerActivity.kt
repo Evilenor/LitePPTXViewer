@@ -8,6 +8,7 @@ import android.graphics.BitmapFactory
 import android.graphics.Color
 import android.graphics.Typeface
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -90,6 +91,7 @@ class OfficeViewerActivity : Activity() {
     private var curPos = 0
     private var total = 0
     private var keepAwake = false
+    private var night = false
     private var textScale = 1f
     private var adapter: BaseAdapter? = null
     private var sheetScrollX = 0
@@ -141,10 +143,15 @@ class OfficeViewerActivity : Activity() {
 
         cacheDir.listFiles()?.forEach { if (it.name.startsWith("doc-")) it.delete() }
 
+        night = UiHelper.isNightMode(this)
+        applyNight()
+
         val savedUri = savedInstanceState?.getString("uri")
-        curSheet = savedInstanceState?.getInt("sheet", 0) ?: 0
-        val uri = intent?.data ?: savedUri?.let { Uri.parse(it) }
-        val savedPos = savedInstanceState?.getInt("pos", 0)
+        curSheet = intent.getIntExtra(EXTRA_SHEET, -1).takeIf { it >= 0 }
+            ?: savedInstanceState?.getInt("sheet", 0) ?: 0
+        val uri = intent?.data ?: streamUri(intent) ?: savedUri?.let { Uri.parse(it) }
+        val savedPos = intent.getIntExtra(EXTRA_POS, -1).takeIf { it >= 0 }
+            ?: savedInstanceState?.getInt("pos", 0)
             ?: uri?.let { RecentStore.find(this, it.toString())?.last } ?: 0
         if (uri == null) {
             Toast.makeText(this, R.string.office_error_open, Toast.LENGTH_SHORT).show()
@@ -152,6 +159,28 @@ class OfficeViewerActivity : Activity() {
             return
         }
         load(uri, savedPos)
+    }
+
+    /** ACTION_SEND hands the file over in EXTRA_STREAM instead of the data URI. */
+    private fun streamUri(i: Intent?): Uri? {
+        if (i?.action != Intent.ACTION_SEND) return null
+        return if (Build.VERSION.SDK_INT >= 33) {
+            i.getParcelableExtra(Intent.EXTRA_STREAM, Uri::class.java)
+        } else {
+            @Suppress("DEPRECATION")
+            i.getParcelableExtra(Intent.EXTRA_STREAM) as? Uri
+        }
+    }
+
+    /**
+     * Night mode: white page, dark text in the day; black page, lightened text at night.
+     * Table and sheet fills are darkened, with the text colour picked from the fill.
+     */
+    private fun applyNight() {
+        list.setBackgroundColor(if (night) Color.BLACK else Color.WHITE)
+        tvNote.setBackgroundColor(if (night) 0xFF2A2A2A.toInt() else 0xFFEEEEEE.toInt())
+        tvNote.setTextColor(if (night) Color.WHITE else Color.BLACK)
+        adapter?.notifyDataSetChanged()
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
@@ -443,6 +472,11 @@ class OfficeViewerActivity : Activity() {
         popup.menuInflater.inflate(R.menu.office_menu, popup.menu)
         val isSheet = workbook != null
         popup.menu.findItem(R.id.action_goto_row)?.isVisible = isSheet
+        popup.menu.findItem(R.id.action_bookmark)?.apply {
+            isVisible = doc != null || workbook != null
+            isChecked = sourceUri?.let { BookmarkStore.find(this@OfficeViewerActivity, it.toString(), curPos, curSheet) } != null
+        }
+        popup.menu.findItem(R.id.action_night_mode)?.isChecked = night
         popup.menu.findItem(R.id.action_keep_awake)?.isChecked = keepAwake
         popup.setOnMenuItemClickListener { item ->
             when (item.itemId) {
@@ -455,9 +489,16 @@ class OfficeViewerActivity : Activity() {
                     if (rows > 1) UiHelper.showGoToDialog(this, R.string.goto_row_title, rows, curPos) { jumpToSheetRow(it) }
                     true
                 }
+                R.id.action_bookmark -> { toggleBookmark(); true }
                 R.id.action_share -> { shareOriginal(); true }
                 R.id.action_open_ext -> { openExternal(); true }
                 R.id.action_reset_zoom -> { list.resetZoom(); true }
+                R.id.action_night_mode -> {
+                    night = !night
+                    UiHelper.setNightMode(this, night)
+                    applyNight()
+                    true
+                }
                 R.id.action_keep_awake -> {
                     keepAwake = !keepAwake
                     UiHelper.setKeepAwake(this, keepAwake)
@@ -467,6 +508,26 @@ class OfficeViewerActivity : Activity() {
             }
         }
         popup.show()
+    }
+
+    /** Adds a bookmark at the current block/row, or removes it if it is already there. */
+    private fun toggleBookmark() {
+        val uri = sourceUri ?: return
+        val kind = if (workbook != null) "sheet" else "doc"
+        if (BookmarkStore.find(this, uri.toString(), curPos, curSheet) != null) {
+            BookmarkStore.remove(this, uri.toString(), curPos, curSheet)
+            Toast.makeText(this, R.string.bookmark_removed, Toast.LENGTH_SHORT).show()
+        } else {
+            BookmarkStore.add(
+                this,
+                BookmarkStore.Entry(
+                    uri.toString(), fileName, kind, curPos,
+                    BookmarkStore.label(this, kind, curPos),
+                    System.currentTimeMillis(), curSheet
+                )
+            )
+            Toast.makeText(this, R.string.bookmark_added, Toast.LENGTH_SHORT).show()
+        }
     }
 
     private fun changeTextScale(delta: Float) {
@@ -641,7 +702,8 @@ class OfficeViewerActivity : Activity() {
             if (end <= start) continue
             val size = (run.sizePt * textScale).toInt().coerceAtLeast(6)
             sb.setSpan(AbsoluteSizeSpan(size, true), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-            sb.setSpan(ForegroundColorSpan(run.color), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            val runColor = if (night) UiHelper.nightTextColor(run.color) else run.color
+            sb.setSpan(ForegroundColorSpan(runColor), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
             if (run.bold) sb.setSpan(StyleSpan(Typeface.BOLD), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
             if (run.italic) sb.setSpan(StyleSpan(Typeface.ITALIC), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
             if (run.underline) sb.setSpan(UnderlineSpan(), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
@@ -716,8 +778,13 @@ class OfficeViewerActivity : Activity() {
                     tv.text = sb.toString()
                     tv.setTextSize(TypedValue.COMPLEX_UNIT_SP, (sizePt * textScale).coerceIn(6f, 32f))
                     tv.setPadding(pad, pad / 2, pad, pad / 2)
-                    tv.setTextColor(Color.WHITE)
-                    if (cell.fill != null) tv.setBackgroundColor(cell.fill)
+                    val fill = cell.fill?.let { if (night) UiHelper.nightFillColor(it) else it }
+                    if (fill != null) {
+                        tv.setBackgroundColor(fill)
+                        tv.setTextColor(if (UiHelper.luminance(fill) > 140f) Color.BLACK else Color.WHITE)
+                    } else {
+                        tv.setTextColor(if (night) Color.WHITE else Color.BLACK)
+                    }
                     val w = weights.getOrElse(col) { 1f }.coerceAtLeast(1f)
                     val lp = TableRow.LayoutParams(0, TableRow.LayoutParams.WRAP_CONTENT, w)
                     lp.span = cell.span.coerceIn(1, 20 - col)
@@ -859,8 +926,13 @@ class OfficeViewerActivity : Activity() {
                 this.text = text
                 gravity = Gravity.CENTER
                 setTypeface(null, Typeface.BOLD)
-                setTextColor(Color.WHITE)
-                setBackgroundColor(0xFF2A2A2A.toInt())
+                if (night) {
+                    setTextColor(Color.WHITE)
+                    setBackgroundColor(0xFF2A2A2A.toInt())
+                } else {
+                    setTextColor(Color.BLACK)
+                    setBackgroundColor(0xFFEEEEEE.toInt())
+                }
                 val w = cellWidthPx(widthChars, dp)
                 layoutParams = LinearLayout.LayoutParams(w, (40 * dp).toInt())
                 setPadding((6 * dp).toInt(), 0, (6 * dp).toInt(), 0)
@@ -879,16 +951,22 @@ class OfficeViewerActivity : Activity() {
                 setPadding((6 * dp).toInt(), (4 * dp).toInt(), (6 * dp).toInt(), (4 * dp).toInt())
                 minHeight = (40 * dp).toInt()
                 if (cell?.bold == true) setTypeface(null, Typeface.BOLD)
-                if (cell?.fill != null) {
-                    val fill = cell.fill
+                val fill = cell?.fill?.let { if (night) UiHelper.nightFillColor(it) else it }
+                if (fill != null) {
                     setBackgroundColor(fill)
-                    val lum = 0.299f * Color.red(fill) + 0.587f * Color.green(fill) + 0.114f * Color.blue(fill)
-                    setTextColor(if (lum > 153f) 0xFF111111.toInt() else Color.WHITE)
+                    setTextColor(if (UiHelper.luminance(fill) > 140f) Color.BLACK else Color.WHITE)
                 } else {
-                    setTextColor(Color.WHITE)
+                    setTextColor(if (night) Color.WHITE else Color.BLACK)
                 }
                 layoutParams = LinearLayout.LayoutParams(cellWidthPx(widthChars, dp), LinearLayout.LayoutParams.WRAP_CONTENT)
             }
         }
+    }
+
+    companion object {
+        /** 0-based block/row to open at (bookmarks, search hits). */
+        const val EXTRA_POS = "pos"
+        /** 0-based sheet to open (bookmarks, search hits). */
+        const val EXTRA_SHEET = "sheet"
     }
 }

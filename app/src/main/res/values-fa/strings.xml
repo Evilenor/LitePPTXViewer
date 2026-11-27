@@ -206,4 +206,49 @@
     <string name="scan_quality_title">کیفیت PDF</string>
     <string name="scan_save_images">ذخیره تصاویر</string>
     <string name="scan_images_saved">%1$d تصویر در دانلودها ذخیره شد</string>
+
+    <!-- v1.7.0 -->
+    <string name="menu_global_search">جستجو در همهٔ فایل‌ها</string>
+    <string name="global_search_title">جستجو در همهٔ فایل‌ها</string>
+    <string name="global_search_hint">جستجوی متن در فایل‌های اخیر…</string>
+    <string name="global_search_min">حداقل ۲ حرف بنویسید</string>
+    <string name="global_search_searching">در حال جستجو…</string>
+    <string name="global_search_none">موردی پیدا نشد</string>
+    <string name="global_search_no_files">فایل اخیری برای جستجو نیست</string>
+    <string name="global_hit_slide">اسلاید %1$d</string>
+    <string name="global_hit_block">بخش %1$d</string>
+    <string name="global_hit_row">ردیف %1$d</string>
+
+    <string name="menu_bookmark">نشانک</string>
+    <string name="bookmark_added">نشانک اضافه شد</string>
+    <string name="bookmark_removed">نشانک حذف شد</string>
+    <string name="bookmarks_title">نشانک‌ها</string>
+    <string name="bookmarks_empty">هنوز نشانکی نیست. فایلی را باز کنید و از منو «نشانک» را بزنید.</string>
+    <string name="bookmark_slide">اسلاید %1$d</string>
+    <string name="bookmark_block">بخش %1$d</string>
+    <string name="bookmark_row">ردیف %1$d</string>
+    <string name="bookmark_page">صفحه %1$d</string>
+
+    <string name="menu_night_mode">حالت شب</string>
+
+    <string name="pdf_batch_results">فایل‌های فشرده‌شده</string>
+    <string name="pdf_batch_method_lossless">بدون افت کیفیت</string>
+    <string name="pdf_batch_method_rendered">بازسازی‌شده (تصویر)</string>
+    <string name="pdf_batch_failed">ناموفق</string>
+    <string name="pdf_batch_save">ذخیره</string>
+    <string name="pdf_batch_working">در حال فشرده‌سازی فایل %1$d از %2$d…</string>
+    <string name="pdf_batch_row">%1$s → %2$s · %3$s</string>
+
+    <string name="recent_sort">مرتب‌سازی فایل‌های اخیر</string>
+    <string name="sort_recency">تازه‌ترین</string>
+    <string name="sort_name">نام</string>
+    <string name="sort_type">نوع</string>
+    <string name="recent_detail_type">نوع: %1$s</string>
+    <string name="recent_detail_count">تعداد: %1$s</string>
+    <string name="recent_detail_size">حجم: %1$s</string>
+    <string name="recent_detail_last">آخرین بازدید: %1$s</string>
+    <string name="recent_kind_pptx">ارائه</string>
+    <string name="recent_kind_doc">سند</string>
+    <string name="recent_kind_sheet">صفحه‌گسترده</string>
+    <string name="recent_kind_pdf">PDF</string>
 </resources>

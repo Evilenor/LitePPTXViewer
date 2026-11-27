@@ -57,7 +57,10 @@ Opening a `.pptx` someone sent you in a chat shouldn't need a 300&nbsp;MB office
 - **Share current slide** (**⋯ > Share current slide**): renders the visible slide as a PNG.
 - **Keep screen on** toggle in the overflow menu.
 - **Export as PDF** (**⋯ > Export as PDF**): every slide is rendered to a page, then you can save, open or share the file.
-- **Recent files** on the start screen with relative timestamps, slide count and remembered position.
+- **Recent files** on the start screen with relative timestamps, slide count and remembered position. Long-press one for its details (type, count, size, last opened); sort them by recency, name or type from the menu.
+- **Global search** (**⋯ > Search all files**): searches the text of every recent file — presentations, documents and sheets — with a snippet per hit; tap to jump to that slide, block or row. PDFs are excluded (Android cannot extract their text).
+- **Bookmarks** (**⋯ > Bookmark**): save the current slide; the home screen lists them, tap to jump back, long-press to delete.
+- **Night mode** (**⋯ > Night mode**): dims the slides for reading in the dark; remembered across sessions.
 
 ### Universal document viewer
 Open a file someone sent you without installing an office suite: **Open document** on the start screen, in the menu, or from any app's *Share* menu.
@@ -66,7 +69,7 @@ Open a file someone sent you without installing an office suite: **Open document
 - **Sheets (`.xlsx`, `.csv`):** sheet tabs, A/B/C column headers, column widths, cell colours, merged cells, Excel-style date and percent formatting, go-to-row. CSV files open as a single sheet with a bold header row.
 - **Plain text:** `.txt`, `.rtf` (bold/italic/underline, Unicode escapes) and Markdown (headings, bullets, `**bold**`, `*italic*`, `` `code` ``).
 - **Legacy Office, text-only:** old `.doc`, `.ppt` and `.xls` files open as recovered plain text, with a clear note that formatting, tables and images are lost.
-- **Everywhere:** full-text search, text size 0.8–1.6×, pinch-to-zoom, share the original file, open externally, keep screen on, and recent files with block/row counts.
+- **Everywhere:** full-text search, text size 0.8–1.6×, pinch-to-zoom, share the original file, open externally, keep screen on, night mode, bookmarks, and recent files with block/row counts.
 - Limits, stated up front in the app: XLSX is capped at 5,000 rows / 100 columns, DOCX at 2,000 blocks.
 
 ### Document & ID-card scanner
@@ -110,12 +113,13 @@ Open any PDF from a file manager, browser, or the *Open PDF* tile on the start s
 - **Pinch-to-zoom** and **page jump** (slider + number input).
 - **Share**, **save to Downloads**, or **open externally** in another app.
 - **Keep screen on** toggle.
-- LitePPTX registers itself as a PDF handler, so tapping any `.pdf` file can open it directly.
+- **Night mode** (**⋯ > Night mode**) dims the pages for reading in the dark; **Bookmark** (**⋯ > Bookmark**) saves the current page to the home screen's Bookmarks section.
+- LitePPTX registers itself as a PDF handler, so tapping any `.pdf` file can open it directly. It also accepts PDFs from any app's *Share* menu.
 
 ### PDF tools
 **PDF Tools** on the start screen (or in the menu): compress, merge and split PDFs, all offline.
 
-- **Compress:** tries a lossless rebuild first. It re-deflates the compressed streams inside classic xref-table PDFs and only keeps the result when it saves at least 5% — text stays text. If that cannot help, it offers a rendered rebuild at Keep (200 dpi), Balanced (170 dpi) or Small (130 dpi), and says plainly that every page becomes an image.
+- **Compress:** tries a lossless rebuild first. It re-deflates the compressed streams inside classic xref-table PDFs and only keeps the result when it saves at least 5% — text stays text. If that cannot help, it offers a rendered rebuild at Keep (200 dpi), Balanced (170 dpi) or Small (130 dpi), and says plainly that every page becomes an image. Pick several PDFs at once and they are compressed in a row, each with its own Save button in the results list.
 - **Merge:** pick two or more PDFs; they are joined in the order you picked them.
 - **Split:** pick a page range and get just those pages as a new PDF.
 - Every result can be shared, saved to Downloads or opened in the viewer.
@@ -152,6 +156,7 @@ LitePPTX is deliberately minimal:
 - Animations, transitions and embedded fonts are ignored (system fonts are used).
 - Only `.pptx` is supported, not legacy `.ppt` — but legacy `.doc`/`.ppt`/`.xls` open as plain text in the document viewer.
 - Lossless PDF compression only works on classic xref-table PDFs; other PDFs fall back to a rendered rebuild, which turns pages into images (text can no longer be selected).
+- Global search covers recent files only and never PDFs (Android's `PdfRenderer` cannot extract text).
 - XLSX is capped at 5,000 rows / 100 columns and DOCX at 2,000 blocks; the viewer says so when the cap is hit.
 - Page reordering uses the ◀ ▶ buttons rather than drag and drop.
 - The scanner has **no OCR** (no searchable text). Automatic edge detection works best on a plain background; on a busy one, drag the corners by hand.

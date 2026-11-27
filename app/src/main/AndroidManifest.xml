@@ -109,6 +109,13 @@
                 <data android:pathPattern=".*\\.pdf" />
                 <data android:pathPattern=".*\\.PDF" />
             </intent-filter>
+
+            <!-- "Share" menu: a shared PDF used to fail, this activity only read intent.data. -->
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="application/pdf" />
+            </intent-filter>
         </activity>
 
         <!-- Universal document viewer: Word, Sheets, legacy Office (text only) and plain text -->
@@ -163,6 +170,8 @@
                 <data android:pathPattern=".*\\.RTF" />
                 <data android:pathPattern=".*\\.md" />
                 <data android:pathPattern=".*\\.MD" />
+                <data android:pathPattern=".*\\.markdown" />
+                <data android:pathPattern=".*\\.MARKDOWN" />
             </intent-filter>
 
             <!-- "Share" menu -->
@@ -173,6 +182,7 @@
                 <data android:mimeType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" />
                 <data android:mimeType="application/msword" />
                 <data android:mimeType="application/vnd.ms-excel" />
+                <data android:mimeType="application/vnd.ms-powerpoint" />
                 <data android:mimeType="text/plain" />
                 <data android:mimeType="text/csv" />
                 <data android:mimeType="application/rtf" />

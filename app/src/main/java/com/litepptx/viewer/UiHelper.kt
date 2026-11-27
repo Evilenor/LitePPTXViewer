@@ -3,6 +3,7 @@ package com.litepptx.viewer
 import android.app.Activity
 import android.app.AlertDialog
 import android.content.Context
+import android.graphics.Color
 import android.net.Uri
 import android.os.Build
 import android.provider.OpenableColumns
@@ -40,6 +41,38 @@ object UiHelper {
     fun setKeepAwake(a: Activity, awake: Boolean) {
         if (awake) a.window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         else a.window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+    }
+
+    // ------------------------------------------------------------------ night mode
+
+    fun isNightMode(ctx: Context): Boolean =
+        ctx.getSharedPreferences("lite", Context.MODE_PRIVATE).getBoolean("night_mode", false)
+
+    fun setNightMode(ctx: Context, on: Boolean) {
+        ctx.getSharedPreferences("lite", Context.MODE_PRIVATE).edit().putBoolean("night_mode", on).apply()
+    }
+
+    /** Perceived brightness, 0 (black) to 255 (white). */
+    fun luminance(color: Int): Float =
+        0.299f * Color.red(color) + 0.587f * Color.green(color) + 0.114f * Color.blue(color)
+
+    /**
+     * Dark document text, lightened so it stays readable on a dark background.
+     * Light text is left alone, so colours survive the mapping.
+     */
+    fun nightTextColor(color: Int): Int {
+        if (luminance(color) >= 140f) return color
+        val t = 0.75f
+        fun ch(c: Int) = (c + (255 - c) * t).toInt().coerceIn(0, 255)
+        return Color.rgb(ch(Color.red(color)), ch(Color.green(color)), ch(Color.blue(color)))
+    }
+
+    /** Light cell fill, darkened so it stays readable on a dark background. */
+    fun nightFillColor(fill: Int): Int {
+        if (luminance(fill) <= 140f) return fill
+        val t = 0.75f
+        fun ch(c: Int) = (c * (1f - t)).toInt().coerceIn(0, 255)
+        return Color.rgb(ch(Color.red(fill)), ch(Color.green(fill)), ch(Color.blue(fill)))
     }
 
     fun displayName(ctx: Context, uri: Uri): String? {

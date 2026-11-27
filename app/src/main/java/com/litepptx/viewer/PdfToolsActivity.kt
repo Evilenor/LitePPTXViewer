@@ -3,17 +3,20 @@ package com.litepptx.viewer
 import android.app.Activity
 import android.app.AlertDialog
 import android.content.Intent
+import android.graphics.Typeface
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.text.InputType
+import android.text.format.Formatter
 import android.view.View
 import android.widget.Button
 import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.ProgressBar
+import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
 import com.litepptx.viewer.pdf.PdfActions
@@ -62,7 +65,7 @@ class PdfToolsActivity : Activity() {
 
         findViewById<View>(R.id.btnBack).setOnClickListener { onBackPressed() }
         findViewById<View>(R.id.presetRow).setOnClickListener { choosePreset() }
-        findViewById<Button>(R.id.btnCompress).setOnClickListener { pickPdf(REQ_COMPRESS, false) }
+        findViewById<Button>(R.id.btnCompress).setOnClickListener { pickPdf(REQ_COMPRESS, true) }
         findViewById<Button>(R.id.btnMerge).setOnClickListener { pickPdf(REQ_MERGE, true) }
         findViewById<Button>(R.id.btnSplit).setOnClickListener { pickPdf(REQ_SPLIT, false) }
         btnCancel.setOnClickListener { cancelled = true }
@@ -150,7 +153,13 @@ class PdfToolsActivity : Activity() {
         }
         if (resultCode != RESULT_OK || data == null) return
         when (requestCode) {
-            REQ_COMPRESS -> data.data?.let { compress(it) }
+            REQ_COMPRESS -> {
+                val uris = ArrayList<Uri>()
+                val cd = data.clipData
+                if (cd != null) for (k in 0 until cd.itemCount) cd.getItemAt(k).uri?.let { uris.add(it) }
+                data.data?.let { uris.add(it) }
+                if (uris.size > 1) batchCompress(uris) else uris.firstOrNull()?.let { compress(it) }
+            }
             REQ_SPLIT -> data.data?.let { prepareSplit(it) }
             REQ_MERGE -> {
                 val uris = ArrayList<Uri>()
@@ -303,6 +312,128 @@ class PdfToolsActivity : Activity() {
                 }
             }
         }
+    }
+
+    // ------------------------------------------------------------------ batch compress
+
+    private class BatchResult(
+        val name: String,
+        val before: Long,
+        val after: Long,
+        val method: String, // "lossless" | "rendered" | "failed"
+        val file: File?
+    )
+
+    /**
+     * Compresses several PDFs in a row. Same per-file logic as [compress],
+     * but a rendered rebuild uses the current preset directly instead of
+     * asking per file. Each result can be saved from the results dialog.
+     */
+    private fun batchCompress(uris: List<Uri>) {
+        if (busy) return
+        busy = true
+        cancelled = false
+        val total = uris.size
+        io.execute {
+            val results = ArrayList<BatchResult>()
+            for ((idx, uri) in uris.withIndex()) {
+                if (destroyed || cancelled) break
+                val name = baseName(uri)
+                ui.post { if (!destroyed) setWorking(true, R.string.pdf_batch_working, idx + 1, total) }
+                val src = copyToCache(uri, "b$idx")
+                if (src == null || PdfTools.pageCount(src) <= 0) {
+                    results += BatchResult(name, src?.length() ?: 0, src?.length() ?: 0, "failed", null)
+                    continue
+                }
+                val before = src.length()
+                val dir = File(cacheDir, "pdf").apply { mkdirs() }
+                val out = File(dir, "${name}_compressed_$idx.pdf")
+                var method = "failed"
+                var after = before
+                var done: File? = null
+                if (PdfTools.compressLossless(src, out)) {
+                    val savedPct = ((before - out.length()) * 100 / before).toInt()
+                    if (savedPct >= 5) {
+                        method = "lossless"
+                        after = out.length()
+                        done = out
+                    } else {
+                        out.delete()
+                    }
+                }
+                if (done == null && !destroyed && !cancelled) {
+                    val res = PdfTools.compressRendered(
+                        this, src, out, preset,
+                        { i -> ui.post { if (!destroyed) tvStatus.text = getString(R.string.pdf_batch_working, idx + 1, total) } },
+                        { destroyed || cancelled }
+                    )
+                    if (res != null) {
+                        method = "rendered"
+                        after = out.length()
+                        done = out
+                    } else {
+                        out.delete()
+                    }
+                }
+                results += BatchResult(name, before, after, method, done)
+            }
+            ui.post {
+                busy = false
+                setWorking(false)
+                if (destroyed || cancelled) return@post
+                showBatchResults(results)
+            }
+        }
+    }
+
+    private fun showBatchResults(results: List<BatchResult>) {
+        val dp = resources.displayMetrics.density
+        val pad = (16 * dp).toInt()
+        val list = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        for (r in results) {
+            val row = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                setPadding(pad, (8 * dp).toInt(), pad, (8 * dp).toInt())
+            }
+            row.addView(TextView(this).apply {
+                text = r.name
+                setTypeface(null, Typeface.BOLD)
+            })
+            val method = when (r.method) {
+                "lossless" -> getString(R.string.pdf_batch_method_lossless)
+                "rendered" -> getString(R.string.pdf_batch_method_rendered)
+                else -> getString(R.string.pdf_batch_failed)
+            }
+            row.addView(TextView(this).apply {
+                text = if (r.file != null) {
+                    getString(
+                        R.string.pdf_batch_row,
+                        Formatter.formatShortFileSize(this@PdfToolsActivity, r.before),
+                        Formatter.formatShortFileSize(this@PdfToolsActivity, r.after),
+                        method
+                    )
+                } else {
+                    method
+                }
+            })
+            if (r.file != null) {
+                row.addView(Button(this).apply {
+                    text = getString(R.string.pdf_batch_save)
+                    setOnClickListener {
+                        // The create-document flow on older Android saves resultFile.
+                        resultFile = r.file
+                        saveResult(r.file)
+                    }
+                })
+            }
+            list.addView(row)
+        }
+        val scroll = ScrollView(this).apply { addView(list) }
+        AlertDialog.Builder(this)
+            .setTitle(R.string.pdf_batch_results)
+            .setView(scroll)
+            .setPositiveButton(R.string.ok, null)
+            .show()
     }
 
     // ------------------------------------------------------------------ merge
