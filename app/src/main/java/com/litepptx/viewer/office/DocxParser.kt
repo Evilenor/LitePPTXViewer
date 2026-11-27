@@ -102,7 +102,7 @@ object DocxParser {
         val pPr = p.child("pPr")
         val styleId = pPr?.child("pStyle")?.a("val")
         val style = styleId?.let { styles[it] } ?: styleId?.lowercase()?.let { styles[it] }
-        val baseSize = style?.sizePt ?: headingSize(styleId)
+        val baseSize = style?.sizePt ?: headingSize(styleId) ?: 11f // Word's default body size
         val baseBold = style?.bold ?: (styleId != null && headingSize(styleId) != null)
         val baseColor = style?.color ?: Color.BLACK
 
