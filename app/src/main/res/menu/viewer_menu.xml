@@ -3,6 +3,12 @@
         android:id="@+id/action_open"
         android:title="@string/menu_open_another" />
     <item
+        android:id="@+id/action_open_doc"
+        android:title="@string/menu_open_doc" />
+    <item
+        android:id="@+id/action_pdf_tools"
+        android:title="@string/menu_pdf_tools" />
+    <item
         android:id="@+id/action_goto"
         android:title="@string/menu_goto" />
     <item

@@ -86,12 +86,15 @@ object PdfActions {
     }
 
     /** Android 10+: writes straight into Downloads. Blocking, call off the main thread. */
-    fun saveToDownloads(ctx: Context, f: File): Boolean {
+    fun saveToDownloads(ctx: Context, f: File): Boolean = saveFileToDownloads(ctx, f, "application/pdf")
+
+    /** Android 10+: writes any file into Downloads with the given MIME type. Blocking, call off the main thread. */
+    fun saveFileToDownloads(ctx: Context, f: File, mimeType: String): Boolean {
         if (Build.VERSION.SDK_INT < 29) return false
         return try {
             val cv = ContentValues().apply {
                 put(MediaStore.Downloads.DISPLAY_NAME, f.name)
-                put(MediaStore.Downloads.MIME_TYPE, "application/pdf")
+                put(MediaStore.Downloads.MIME_TYPE, mimeType)
                 put(MediaStore.Downloads.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS)
                 put(MediaStore.Downloads.IS_PENDING, 1)
             }

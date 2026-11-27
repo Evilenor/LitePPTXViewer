@@ -19,6 +19,7 @@ object ScanFilters {
     const val ENHANCED = 1
     const val BW = 2
     const val GRAY = 3
+    const val MAGIC = 4
 
     /** Returns [src] untouched for ORIGINAL, otherwise a filtered copy. Safe for previews. */
     fun copyWith(src: Bitmap, mode: Int): Bitmap {
@@ -43,6 +44,43 @@ object ScanFilters {
         process(px, w, h, mode)
         bmp.setPixels(px, 0, w, 0, 0, w, h)
     }
+
+    /** 3x3 unsharp mask (amount 0.5) in place; borders are left untouched. Bitmap must be mutable. */
+    fun sharpenInPlace(bmp: Bitmap) {
+        val w = bmp.width
+        val h = bmp.height
+        if (w < 3 || h < 3) return
+        val src = IntArray(w * h)
+        bmp.getPixels(src, 0, w, 0, 0, w, h)
+        val out = src.copyOf()
+        for (y in 1 until h - 1) {
+            var i = y * w + 1
+            for (x in 1 until w - 1) {
+                var sr = 0
+                var sg = 0
+                var sb = 0
+                for (dy in -1..1) {
+                    var j = i + dy * w - 1
+                    for (dx in -1..1) {
+                        val p = src[j++]
+                        sr += (p shr 16) and 255
+                        sg += (p shr 8) and 255
+                        sb += p and 255
+                    }
+                }
+                val p = src[i]
+                val r = sharp((p shr 16) and 255, sr / 9)
+                val g = sharp((p shr 8) and 255, sg / 9)
+                val b = sharp(p and 255, sb / 9)
+                out[i] = (255 shl 24) or (r shl 16) or (g shl 8) or b
+                i++
+            }
+        }
+        bmp.setPixels(out, 0, w, 0, 0, w, h)
+    }
+
+    private fun sharp(orig: Int, blurred: Int): Int =
+        (orig + (orig - blurred) * 0.5f).toInt().coerceIn(0, 255)
 
     /** ARGB ints in, ARGB ints out (alpha forced to 255). */
     fun process(px: IntArray, w: Int, h: Int, mode: Int) {
@@ -153,8 +191,16 @@ object ScanFilters {
         }
 
         // ---- 4. divide every pixel by its (bilinearly interpolated) paper colour ----
-        val lo = if (mode == BW) 0.50f else 0.16f
-        val hi = if (mode == BW) 0.74f else 0.94f
+        val lo = when (mode) {
+            BW -> 0.50f
+            MAGIC -> 0.10f
+            else -> 0.16f
+        }
+        val hi = when (mode) {
+            BW -> 0.74f
+            MAGIC -> 0.96f
+            else -> 0.94f
+        }
         val inv = 1f / (hi - lo)
         val x0s = IntArray(w)
         val fxs = FloatArray(w)
@@ -186,8 +232,18 @@ object ScanFilters {
                 val ng = min(1f, ((p shr 8) and 255) / bgG)
                 val nb = min(1f, (p and 255) / bgB)
                 val out: Int
-                if (mode == ENHANCED) {
-                    out = (255 shl 24) or (level(nr, lo, inv) shl 16) or (level(ng, lo, inv) shl 8) or level(nb, lo, inv)
+                if (mode == ENHANCED || mode == MAGIC) {
+                    var r = nr
+                    var g = ng
+                    var b = nb
+                    if (mode == MAGIC) {
+                        // Saturation boost around the pixel's own grey level.
+                        val gray = 0.299f * r + 0.587f * g + 0.114f * b
+                        r = (gray + (r - gray) * 1.3f).coerceIn(0f, 1f)
+                        g = (gray + (g - gray) * 1.3f).coerceIn(0f, 1f)
+                        b = (gray + (b - gray) * 1.3f).coerceIn(0f, 1f)
+                    }
+                    out = (255 shl 24) or (level(r, lo, inv) shl 16) or (level(g, lo, inv) shl 8) or level(b, lo, inv)
                 } else {
                     val l = 0.299f * nr + 0.587f * ng + 0.114f * nb
                     val v = if (mode == BW) {
