@@ -3,6 +3,25 @@
 All notable changes to LitePPTX. Versions follow [semantic versioning](https://semver.org/).
 Release notes for each version live in [`release-notes/`](release-notes/).
 
+## [1.7.0] - 2026-11-27
+
+### Added
+- **Global search** (home menu): full-text search across all recent files — PPTX slides, DOCX/XLSX/TXT/CSV/RTF/MD and legacy Office text — on a background thread with debounced input (~300 ms) and a progress state. Results are grouped by file with a snippet, capped at 50 hits; tapping one opens the file at that slide, block or sheet row.
+- **Bookmarks**: a "Bookmark" menu item (checkable) in the PPTX, office and PDF viewers saves the current slide, document block, sheet row or PDF page. The home screen shows a **Bookmarks** section with an empty-state text; tap jumps to the file and position, long-press or the × deletes.
+- **Night mode**: persisted toggle in the home overflow menu and in each viewer menu, applied immediately. PPTX/PDF viewers dim rendered pages with a translucent black overlay (bitmaps are never inverted); the office viewer switches to a black page with lightened text and darkened table/sheet fills.
+- **Batch PDF compress**: Compress in PDF Tools now allows multiple selection. Each file is compressed with the single-file logic (lossless first, rendered rebuild at the current preset when it saves <5%, no per-file dialog). A results dialog lists name, before → after size and method per file, each with its own Save button (Downloads on API 29+, create-document flow below).
+- **Recent details + sorting**: long-press a recent item for a details dialog (type, slide/block/row count, size when resolvable, last-opened relative time). Home menu sorts recents by recency (default), name or type; the choice persists.
+
+### Fixed
+- **Shared PDFs failed to open**: `PdfViewerActivity` had no SEND filter for `application/pdf` and only read `intent.data`. It now accepts ACTION_SEND via `EXTRA_STREAM` too.
+- **Shared legacy `.ppt` failed**: `OfficeViewerActivity`'s SEND filter was missing `application/vnd.ms-powerpoint`.
+- **`.markdown` files did not open from file managers**: the VIEW fallback filter only listed `.md`/`.MD`.
+- **DOCX default text rendered black-on-black**: the office viewer drew black text on its dark page. The page is now white in day mode (black with light text at night), and table cells without a fill get readable text in both modes.
+
+### Known limitations
+- Global search covers recent files only; PDFs are excluded (PdfRenderer cannot extract text).
+- Bookmarks and search hits open PPTX files through the normal load path, so a file that was deleted or moved shows the usual load error instead of jumping.
+
 ## [1.6.0] - 2026-11-27
 
 ### Added
@@ -133,6 +152,7 @@ Release notes for each version live in [`release-notes/`](release-notes/).
 ### Added
 - First release: a dependency-free PowerPoint (`.pptx`) viewer for Android 5.0+ with master/layout inheritance, shapes, tables, gradients, bullets, right-to-left text, pinch-to-zoom and a page counter.
 
+[1.7.0]: https://github.com/Evilenor/LitePPTXViewer/releases/tag/v1.7.0
 [1.6.0]: https://github.com/Evilenor/LitePPTXViewer/releases/tag/v1.6.0
 [1.5.0]: https://github.com/Evilenor/LitePPTXViewer/releases/tag/v1.5.0
 [1.4.1]: https://github.com/Evilenor/LitePPTXViewer/releases/tag/v1.4.1

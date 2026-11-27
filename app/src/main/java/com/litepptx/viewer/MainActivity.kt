@@ -2,6 +2,7 @@ package com.litepptx.viewer
 
 import android.app.Activity
 import android.app.AlertDialog
+import android.content.ContentResolver
 import android.content.Intent
 import android.graphics.Bitmap
 import android.net.Uri
@@ -9,7 +10,11 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.provider.OpenableColumns
+import android.text.Editable
 import android.text.InputType
+import android.text.TextWatcher
+import android.text.format.Formatter
 import android.view.View
 import android.widget.AbsListView
 import android.widget.Button
@@ -18,6 +23,7 @@ import android.widget.ImageButton
 import android.widget.LinearLayout
 import android.widget.PopupMenu
 import android.widget.ProgressBar
+import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
 import com.litepptx.viewer.pdf.PdfActions
@@ -62,12 +68,19 @@ class MainActivity : Activity() {
     private lateinit var ivHeart: View
     private lateinit var recentSection: View
     private lateinit var recentList: LinearLayout
+    private lateinit var bookmarkSection: View
+    private lateinit var bookmarkList: LinearLayout
+    private lateinit var tvBookmarkEmpty: TextView
     private lateinit var btnNotes: TextView
     private var curSlide = 0
     private var startAt = 0
     private var loadingFromRecent = false
     private var openedFromHome = false
     private var keepAwake = false
+    private var night = false
+    private var searchGen = 0
+    private var recentSort = 0 // 0 recency, 1 name, 2 type
+    private lateinit var dimOverlay: View
 
     /** A slow double-beat on the heart, only while the start screen is visible. */
     private val heartbeat = object : Runnable {
@@ -118,11 +131,18 @@ class MainActivity : Activity() {
         tvUpdate = findViewById(R.id.tvUpdate)
         btnUpdate = findViewById(R.id.btnUpdate)
         moreBadge = findViewById(R.id.moreBadge)
+        dimOverlay = findViewById(R.id.dimOverlay)
+        night = UiHelper.isNightMode(this)
+        applyNight()
         btnUpdate.setOnClickListener { onUpdateClick() }
         donateCard = findViewById(R.id.donateCard)
         ivHeart = findViewById(R.id.ivHeart)
         recentSection = findViewById(R.id.recentSection)
         recentList = findViewById(R.id.recentList)
+        bookmarkSection = findViewById(R.id.bookmarkSection)
+        bookmarkList = findViewById(R.id.bookmarkList)
+        tvBookmarkEmpty = findViewById(R.id.tvBookmarkEmpty)
+        recentSort = getSharedPreferences("lite", MODE_PRIVATE).getInt("recent_sort", 0)
         donateCard.setOnClickListener { openDonate() }
         findViewById<View>(R.id.tvRecentClear).setOnClickListener {
             RecentStore.clear(this)
@@ -410,6 +430,10 @@ class MainActivity : Activity() {
         val hasDeck = deck != null
         val menu = popup.menu
         menu.findItem(R.id.action_goto)?.isVisible = hasDeck && slideCount > 1
+        menu.findItem(R.id.action_bookmark)?.apply {
+            isVisible = hasDeck
+            isChecked = currentUri?.let { BookmarkStore.find(this@MainActivity, it.toString(), curSlide) } != null
+        }
         menu.findItem(R.id.action_search)?.isVisible = hasDeck
         menu.findItem(R.id.action_notes)?.isVisible = hasDeck
         menu.findItem(R.id.action_share_slide)?.isVisible = hasDeck
@@ -420,6 +444,7 @@ class MainActivity : Activity() {
             isVisible = hasDeck
             isChecked = keepAwake
         }
+        menu.findItem(R.id.action_night_mode)?.isChecked = night
         // While an update is waiting, the menu entry becomes the action itself.
         updInfo?.let { u ->
             menu.findItem(R.id.action_check_update)?.title = getString(
@@ -434,7 +459,10 @@ class MainActivity : Activity() {
                     startActivity(Intent(this, PdfToolsActivity::class.java))
                     true
                 }
+                R.id.action_global_search -> { searchAllFiles(); true }
+                R.id.action_sort_recents -> { showSortDialog(); true }
                 R.id.action_goto -> { goToSlide(); true }
+                R.id.action_bookmark -> { toggleBookmark(); true }
                 R.id.action_search -> { searchSlides(); true }
                 R.id.action_notes -> { showNotes(); true }
                 R.id.action_share_slide -> { shareCurrentSlide(); true }
@@ -446,6 +474,12 @@ class MainActivity : Activity() {
                 R.id.action_donate -> { openDonate(); true }
                 R.id.action_share -> { share(); true }
                 R.id.action_reset_zoom -> { list.resetZoom(); true }
+                R.id.action_night_mode -> {
+                    night = !night
+                    UiHelper.setNightMode(this, night)
+                    applyNight()
+                    true
+                }
                 R.id.action_keep_awake -> {
                     keepAwake = !keepAwake
                     UiHelper.setKeepAwake(this, keepAwake)
@@ -455,6 +489,11 @@ class MainActivity : Activity() {
             }
         }
         popup.show()
+    }
+
+    /** Night mode dims the rendered slides; the home screen is already dark. */
+    private fun applyNight() {
+        dimOverlay.visibility = if (night) View.VISIBLE else View.GONE
     }
 
     private fun openPdfMaker() {
@@ -547,6 +586,101 @@ class MainActivity : Activity() {
             }
             .setNegativeButton(R.string.cancel, null)
             .show()
+    }
+
+    // ------------------------------------------------------------------ global search
+
+    /** Searches the text of every recent file; PDFs are excluded (no text extraction). */
+    private fun searchAllFiles() {
+        val dp = resources.displayMetrics.density
+        val pad = (20 * dp).toInt()
+        val hasFiles = RecentStore.load(this).isNotEmpty()
+        val input = EditText(this).apply {
+            hint = getString(R.string.global_search_hint)
+            inputType = InputType.TYPE_CLASS_TEXT
+            setSingleLine(true)
+        }
+        val progress = ProgressBar(this).apply {
+            isIndeterminate = true
+            visibility = View.GONE
+        }
+        val status = TextView(this).apply {
+            text = getString(if (hasFiles) R.string.global_search_min else R.string.global_search_no_files)
+            setPadding(0, (12 * dp).toInt(), 0, 0)
+        }
+        val results = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        val scroll = ScrollView(this).apply { addView(results) }
+        val box = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(pad, (12 * dp).toInt(), pad, 0)
+            addView(input)
+            addView(progress)
+            addView(status)
+            addView(scroll)
+        }
+        val dialog = AlertDialog.Builder(this)
+            .setTitle(R.string.global_search_title)
+            .setView(box)
+            .setNegativeButton(R.string.cancel, null)
+            .create()
+        val runSearch = Runnable {
+            if (!dialog.isShowing) return@Runnable
+            val q = input.text.toString().trim()
+            val my = ++searchGen
+            if (!hasFiles) {
+                status.text = getString(R.string.global_search_no_files)
+                return@Runnable
+            }
+            if (q.length < 2) {
+                progress.visibility = View.GONE
+                status.visibility = View.VISIBLE
+                status.text = getString(R.string.global_search_min)
+                results.removeAllViews()
+                return@Runnable
+            }
+            progress.visibility = View.VISIBLE
+            status.visibility = View.VISIBLE
+            status.text = getString(R.string.global_search_searching)
+            results.removeAllViews()
+            io.execute {
+                val hits = GlobalSearch.search(this, q)
+                ui.post {
+                    if (my != searchGen || !dialog.isShowing) return@post
+                    progress.visibility = View.GONE
+                    results.removeAllViews()
+                    if (hits.isEmpty()) {
+                        status.visibility = View.VISIBLE
+                        status.text = getString(R.string.global_search_none)
+                    } else {
+                        status.visibility = View.GONE
+                        for (h in hits) results.addView(globalHitRow(h, dialog, results))
+                    }
+                }
+            }
+        }
+        input.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+            override fun afterTextChanged(s: Editable?) {
+                ui.removeCallbacks(runSearch)
+                ui.postDelayed(runSearch, 300)
+            }
+        })
+        dialog.show()
+        input.requestFocus()
+    }
+
+    private fun globalHitRow(h: GlobalHit, dialog: AlertDialog, parent: LinearLayout): View {
+        val row = layoutInflater.inflate(R.layout.item_recent, parent, false)
+        row.findViewById<TextView>(R.id.tvRecentName).text = h.name
+        row.findViewById<TextView>(R.id.tvRecentMeta).text = "${h.label} · ${h.snippet}"
+        row.findViewById<View>(R.id.btnRecentRemove).visibility = View.GONE
+        row.setOnClickListener {
+            dialog.dismiss()
+            // A search hit opens exactly like a bookmark at the same position.
+            openBookmark(BookmarkStore.Entry(h.uri, h.name, h.kind, h.pos, h.label, 0L, h.sheet))
+        }
+        return row
     }
 
     private fun shareCurrentSlide() {
@@ -849,7 +983,13 @@ class MainActivity : Activity() {
     // ------------------------------------------------------------------ recent files
 
     private fun renderRecent() {
-        val entries = RecentStore.load(this)
+        val entries = when (recentSort) {
+            1 -> RecentStore.load(this).sortedBy { it.name.lowercase() }
+            2 -> RecentStore.load(this).sortedWith(
+                compareBy({ kindRank(it.kind) }, { it.name.lowercase() })
+            )
+            else -> RecentStore.load(this)
+        }
         recentList.removeAllViews()
         if (entries.isEmpty()) {
             recentSection.visibility = View.GONE
@@ -888,12 +1028,159 @@ class MainActivity : Activity() {
                     }
                 }
             }
+            row.setOnLongClickListener { showRecentDetails(e); true }
             row.findViewById<View>(R.id.btnRecentRemove).setOnClickListener {
                 RecentStore.remove(this, e.uri)
                 renderRecent()
             }
             recentList.addView(row)
         }
+        renderBookmarks()
+    }
+
+    /** Recents sort order: presentations, documents, spreadsheets, PDFs, then name. */
+    private fun kindRank(kind: String): Int = when (kind) {
+        "pptx" -> 0
+        "doc" -> 1
+        "sheet" -> 2
+        "pdf" -> 3
+        else -> 4
+    }
+
+    private fun showSortDialog() {
+        val items = arrayOf(
+            getString(R.string.sort_recency),
+            getString(R.string.sort_name),
+            getString(R.string.sort_type)
+        )
+        AlertDialog.Builder(this)
+            .setTitle(R.string.recent_sort)
+            .setSingleChoiceItems(items, recentSort) { d, which ->
+                recentSort = which
+                getSharedPreferences("lite", MODE_PRIVATE).edit().putInt("recent_sort", recentSort).apply()
+                renderRecent()
+                d.dismiss()
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
+    }
+
+    private fun showRecentDetails(e: RecentStore.Entry) {
+        val kindRes = when (e.kind) {
+            "doc" -> R.string.recent_kind_doc
+            "sheet" -> R.string.recent_kind_sheet
+            "pdf" -> R.string.recent_kind_pdf
+            else -> R.string.recent_kind_pptx
+        }
+        val countRes = when (e.kind) {
+            "doc" -> R.plurals.recent_blocks
+            "sheet" -> R.plurals.recent_rows
+            else -> R.plurals.recent_slides
+        }
+        val lines = ArrayList<String>()
+        lines += getString(R.string.recent_detail_type, getString(kindRes))
+        if (e.slides > 0) {
+            lines += getString(
+                R.string.recent_detail_count,
+                resources.getQuantityString(countRes, e.slides, e.slides)
+            )
+        }
+        recentFileSize(Uri.parse(e.uri))?.let { lines += getString(R.string.recent_detail_size, it) }
+        lines += getString(R.string.recent_detail_last, relativeTime(e.time))
+        AlertDialog.Builder(this)
+            .setTitle(e.name)
+            .setMessage(lines.joinToString("\n"))
+            .setPositiveButton(R.string.ok, null)
+            .show()
+    }
+
+    /** Human-readable size, or null when the file is gone or the size is unknowable. */
+    private fun recentFileSize(uri: Uri): String? {
+        return try {
+            val size = when (uri.scheme) {
+                ContentResolver.SCHEME_CONTENT -> contentResolver.query(
+                    uri, arrayOf(OpenableColumns.SIZE), null, null, null
+                )?.use { c ->
+                    if (c.moveToFirst() && !c.isNull(0)) c.getLong(0) else null
+                }
+                ContentResolver.SCHEME_FILE -> File(uri.path ?: return null)
+                    .let { if (it.exists()) it.length() else null }
+                else -> null
+            } ?: return null
+            Formatter.formatShortFileSize(this, size)
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    // ------------------------------------------------------------------ bookmarks
+
+    private fun renderBookmarks() {
+        val entries = BookmarkStore.load(this)
+        bookmarkList.removeAllViews()
+        tvBookmarkEmpty.visibility = if (entries.isEmpty()) View.VISIBLE else View.GONE
+        for (e in entries) {
+            val row = layoutInflater.inflate(R.layout.item_recent, bookmarkList, false)
+            row.findViewById<TextView>(R.id.tvRecentName).text = e.name
+            row.findViewById<TextView>(R.id.tvRecentMeta).text =
+                getString(R.string.recent_meta, e.label, relativeTime(e.time))
+            row.setOnClickListener { openBookmark(e) }
+            row.setOnLongClickListener { deleteBookmark(e); true }
+            row.findViewById<View>(R.id.btnRecentRemove).setOnClickListener { deleteBookmark(e) }
+            bookmarkList.addView(row)
+        }
+    }
+
+    private fun deleteBookmark(e: BookmarkStore.Entry) {
+        BookmarkStore.remove(this, e.uri, e.pos, e.sheet)
+        renderBookmarks()
+    }
+
+    private fun openBookmark(e: BookmarkStore.Entry) {
+        val uri = Uri.parse(e.uri)
+        try {
+            when (e.kind) {
+                "pdf" -> startActivity(Intent(this, PdfViewerActivity::class.java).apply {
+                    data = uri
+                    putExtra(PdfViewerActivity.EXTRA_NAME, e.name)
+                    putExtra(PdfViewerActivity.EXTRA_POS, e.pos)
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                })
+                "doc", "sheet" -> startActivity(Intent(this, OfficeViewerActivity::class.java).apply {
+                    action = Intent.ACTION_VIEW
+                    setData(uri)
+                    putExtra(OfficeViewerActivity.EXTRA_POS, e.pos)
+                    putExtra(OfficeViewerActivity.EXTRA_SHEET, e.sheet)
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                })
+                else -> load(uri, fromRecent = true, resumeSlide = e.pos, fromHome = true)
+            }
+        } catch (_: Exception) {
+            Toast.makeText(this, R.string.error_loading, Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    /** Adds a bookmark at the current slide, or removes it if it is already there. */
+    private fun toggleBookmark() {
+        val uri = currentUri ?: return
+        val existing = BookmarkStore.find(this, uri.toString(), curSlide)
+        if (existing != null) {
+            BookmarkStore.remove(this, uri.toString(), curSlide)
+            Toast.makeText(this, R.string.bookmark_removed, Toast.LENGTH_SHORT).show()
+        } else {
+            BookmarkStore.add(
+                this,
+                BookmarkStore.Entry(
+                    uri.toString(),
+                    UiHelper.displayName(this, uri) ?: getString(R.string.app_name),
+                    "pptx", curSlide,
+                    BookmarkStore.label(this, "pptx", curSlide),
+                    System.currentTimeMillis()
+                )
+            )
+            Toast.makeText(this, R.string.bookmark_added, Toast.LENGTH_SHORT).show()
+        }
+        renderBookmarks()
     }
 
     private fun relativeTime(ms: Long): String {

@@ -69,6 +69,16 @@
             android:paddingBottom="28dp"
             android:scrollbars="none" />
 
+        <!-- Night mode: dims rendered pages without touching the bitmaps. -->
+        <View
+            android:id="@+id/dimOverlay"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="#80000000"
+            android:clickable="false"
+            android:focusable="false"
+            android:visibility="gone" />
+
         <TextView
             android:id="@+id/tvPageCounter"
             android:layout_width="wrap_content"

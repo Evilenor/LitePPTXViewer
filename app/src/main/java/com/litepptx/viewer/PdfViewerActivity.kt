@@ -36,6 +36,7 @@ class PdfViewerActivity : Activity() {
     private lateinit var tvPageCounter: TextView
     private lateinit var list: ZoomableListView
     private lateinit var progressBar: ProgressBar
+    private lateinit var dimOverlay: View
 
     private val ui = Handler(Looper.getMainLooper())
     private val io = Executors.newSingleThreadExecutor()
@@ -49,7 +50,9 @@ class PdfViewerActivity : Activity() {
     private var ratios: FloatArray = FloatArray(0)
     private var pageCount = 0
     private var curPage = 0
+    private var startPage = 0
     private var keepAwake = false
+    private var night = false
     private var adapter: PageAdapter? = null
 
     private val hideCounter = Runnable {
@@ -67,6 +70,9 @@ class PdfViewerActivity : Activity() {
         tvPageCounter = findViewById(R.id.tvPageCounter)
         list = findViewById(R.id.listPages)
         progressBar = findViewById(R.id.progressBar)
+        dimOverlay = findViewById(R.id.dimOverlay)
+        night = UiHelper.isNightMode(this)
+        applyNight()
 
         findViewById<View>(R.id.btnBack).setOnClickListener { onBackPressed() }
         findViewById<View>(R.id.btnMore).setOnClickListener { showMenu(it) }
@@ -94,19 +100,31 @@ class PdfViewerActivity : Activity() {
             }
         }
 
-        val uri = intent?.data
+        val uri = intent?.data ?: streamUri(intent)
         if (uri == null) {
             Toast.makeText(this, R.string.pdf_error_open, Toast.LENGTH_SHORT).show()
             finish()
             return
         }
+        startPage = intent.getIntExtra(EXTRA_POS, 0)
         load(uri, intent.getStringExtra(EXTRA_NAME))
     }
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
-        intent.data?.let { load(it, intent.getStringExtra(EXTRA_NAME)) }
+        (intent.data ?: streamUri(intent))?.let { load(it, intent.getStringExtra(EXTRA_NAME)) }
+    }
+
+    /** ACTION_SEND hands the file over in EXTRA_STREAM instead of the data URI. */
+    private fun streamUri(i: Intent?): Uri? {
+        if (i?.action != Intent.ACTION_SEND) return null
+        return if (Build.VERSION.SDK_INT >= 33) {
+            i.getParcelableExtra(Intent.EXTRA_STREAM, Uri::class.java)
+        } else {
+            @Suppress("DEPRECATION")
+            i.getParcelableExtra(Intent.EXTRA_STREAM) as? Uri
+        }
     }
 
     @Deprecated("Deprecated in Java")
@@ -200,15 +218,15 @@ class PdfViewerActivity : Activity() {
                     renderer = r
                     ratios = pageRatios
                     pageCount = r.pageCount
-                    curPage = 0
+                    curPage = startPage.coerceIn(0, pageCount - 1)
 
                     val width = (resources.displayMetrics.widthPixels * 1.3f).toInt().coerceIn(1080, 1600)
                     val a = PageAdapter(r, width)
                     adapter = a
                     list.resetZoom()
                     list.adapter = a
-                    list.setSelection(0)
-                    showCounter("1 / $pageCount")
+                    list.setSelection(curPage)
+                    showCounter("${curPage + 1} / $pageCount")
                 }
             }
         } catch (_: Exception) {
@@ -240,6 +258,11 @@ class PdfViewerActivity : Activity() {
         val popup = PopupMenu(this, anchor)
         popup.menuInflater.inflate(R.menu.pdf_viewer_menu, popup.menu)
         popup.menu.findItem(R.id.action_goto)?.isVisible = pageCount > 1
+        popup.menu.findItem(R.id.action_bookmark)?.apply {
+            isVisible = pageCount > 0
+            isChecked = sourceUri?.let { BookmarkStore.find(this@PdfViewerActivity, it.toString(), curPage) } != null
+        }
+        popup.menu.findItem(R.id.action_night_mode)?.isChecked = night
         popup.menu.findItem(R.id.action_keep_awake)?.isChecked = keepAwake
         popup.setOnMenuItemClickListener { item ->
             when (item.itemId) {
@@ -247,6 +270,7 @@ class PdfViewerActivity : Activity() {
                     UiHelper.showGoToDialog(this, R.string.goto_page_title, pageCount, curPage) { jumpTo(it) }
                     true
                 }
+                R.id.action_bookmark -> { toggleBookmark(); true }
                 R.id.action_share -> { sharePdf(); true }
                 R.id.action_save -> { savePdf(); true }
                 R.id.action_open_ext -> {
@@ -254,6 +278,12 @@ class PdfViewerActivity : Activity() {
                     true
                 }
                 R.id.action_reset_zoom -> { list.resetZoom(); true }
+                R.id.action_night_mode -> {
+                    night = !night
+                    UiHelper.setNightMode(this, night)
+                    applyNight()
+                    true
+                }
                 R.id.action_keep_awake -> {
                     keepAwake = !keepAwake
                     UiHelper.setKeepAwake(this, keepAwake)
@@ -263,6 +293,30 @@ class PdfViewerActivity : Activity() {
             }
         }
         popup.show()
+    }
+
+    /** Adds a bookmark at the current page, or removes it if it is already there. */
+    private fun toggleBookmark() {
+        val uri = sourceUri ?: return
+        if (BookmarkStore.find(this, uri.toString(), curPage) != null) {
+            BookmarkStore.remove(this, uri.toString(), curPage)
+            Toast.makeText(this, R.string.bookmark_removed, Toast.LENGTH_SHORT).show()
+        } else {
+            BookmarkStore.add(
+                this,
+                BookmarkStore.Entry(
+                    uri.toString(), fileName, "pdf", curPage,
+                    BookmarkStore.label(this, "pdf", curPage),
+                    System.currentTimeMillis()
+                )
+            )
+            Toast.makeText(this, R.string.bookmark_added, Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    /** Night mode dims the rendered pages; the chrome is already dark. */
+    private fun applyNight() {
+        dimOverlay.visibility = if (night) View.VISIBLE else View.GONE
     }
 
     private fun sharePdf() {
@@ -412,6 +466,8 @@ class PdfViewerActivity : Activity() {
 
     companion object {
         const val EXTRA_NAME = "name"
+        /** 0-based page to open at (bookmarks, search hits). */
+        const val EXTRA_POS = "pos"
         private const val REQ_SAVE = 4001
     }
 }
