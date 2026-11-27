@@ -102,4 +102,56 @@
     <string name="scan_discard_msg">%1$d صفحه‌ی اسکن‌شده از بین می‌رود.</string>
     <string name="scan_discard">دور ریختن</string>
     <string name="scan_keep">نگه داشتن</string>
+
+    <string name="home_open_sub">فوری باز می‌شود، بدون نیاز به اینترنت</string>
+    <string name="home_scan_sub">از دوربین تا PDF تمیز</string>
+    <string name="home_pdf_sub">عکس‌ها در یک PDF</string>
+    <string name="recent_title">اخیر</string>
+    <string name="recent_clear">پاک کردن</string>
+    <plurals name="recent_slides">
+        <item quantity="one">%d اسلاید</item>
+        <item quantity="other">%d اسلاید</item>
+    </plurals>
+    <string name="recent_meta">%1$s · %2$s</string>
+    <string name="recent_resume">اسلاید %1$d از %2$d · %3$s</string>
+    <string name="recent_gone">این فایل دیگر در دسترس نیست</string>
+    <string name="menu_goto">رفتن به اسلاید…</string>
+    <string name="goto_title">رفتن به اسلاید</string>
+    <string name="goto_hint">۱ تا %1$d</string>
+    <string name="goto_go">برو</string>
+    <string name="menu_keep_awake">روشن ماندن صفحه</string>
+
+    <string name="home_id_card">اسکن کارت</string>
+    <string name="home_id_card_sub">پشت‌ورو در یک A4</string>
+    <string name="home_open_pdf">باز کردن PDF</string>
+    <string name="home_open_pdf_sub">نمایشگر سریع آفلاین</string>
+    <string name="time_now">هم‌اکنون</string>
+    <string name="time_min">%1$d دقیقه پیش</string>
+    <string name="time_hour">%1$d ساعت پیش</string>
+    <string name="time_day">%1$d روز پیش</string>
+
+    <string name="menu_search">جستجو در اسلایدها…</string>
+    <string name="search_hint">جستجوی متن در پرزنتیشن…</string>
+    <string name="search_none">اسلایدی با این متن پیدا نشد</string>
+    <string name="search_match">اسلاید %1$d · %2$s</string>
+    <string name="menu_notes">یادداشت‌های ارائه</string>
+    <string name="notes_title">یادداشت · اسلاید %1$d</string>
+    <string name="notes_empty">یادداشتی برای این اسلاید ثبت نشده است</string>
+    <string name="notes_badge">یادداشت</string>
+    <string name="menu_share_slide">اشتراک اسلاید فعلی</string>
+
+    <string name="scan_mode_doc">سند معمولی</string>
+    <string name="scan_mode_id">کارت شناسایی (دورو)</string>
+    <string name="scan_id_hint">روی و پشت کارت شناسایی را اسکن کنید تا هر دو مرتب روی یک برگ A4 قرار بگیرند.</string>
+    <string name="scan_id_front">روی کارت</string>
+    <string name="scan_id_back">پشت کارت</string>
+    <string name="scan_undo">حذف آخرین صفحه</string>
+
+    <string name="pdf_viewer_title">نمایشگر PDF</string>
+    <string name="pdf_error_open">باز کردن این فایل PDF ممکن نشد.</string>
+    <string name="menu_open_external">باز کردن با برنامه دیگر</string>
+    <string name="menu_save_downloads">ذخیره در دانلودها</string>
+    <string name="goto_page_title">رفتن به صفحه</string>
+    <string name="pdf_select_hint">برای جابجایی، چرخش یا حذف، روی یک عکس بزنید</string>
+    <string name="pdf_selected_n">صفحه %1$d انتخاب شد</string>
 </resources>

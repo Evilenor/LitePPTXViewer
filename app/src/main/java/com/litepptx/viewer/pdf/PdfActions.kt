@@ -12,6 +12,7 @@ import android.os.Build
 import android.os.Environment
 import android.provider.MediaStore
 import android.text.format.Formatter
+import com.litepptx.viewer.PdfViewerActivity
 import com.litepptx.viewer.R
 import java.io.File
 
@@ -32,17 +33,55 @@ object PdfActions {
         }
     }
 
+    fun shareImage(a: Activity, f: File, chooserTitle: String) {
+        val uri = PdfShareProvider.uriFor(f.name)
+        val send = Intent(Intent.ACTION_SEND).apply {
+            type = "image/png"
+            putExtra(Intent.EXTRA_STREAM, uri)
+            clipData = ClipData.newRawUri(f.name, uri)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        try {
+            a.startActivity(Intent.createChooser(send, chooserTitle))
+        } catch (_: Exception) {
+        }
+    }
+
+    /** Opens the PDF in the built-in viewer so the user never has to leave the app. */
     fun open(a: Activity, f: File, chooserTitle: String) {
         val uri = PdfShareProvider.uriFor(f.name)
+        val view = Intent(a, PdfViewerActivity::class.java).apply {
+            action = Intent.ACTION_VIEW
+            setDataAndType(uri, "application/pdf")
+            putExtra(PdfViewerActivity.EXTRA_NAME, f.name)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        try {
+            a.startActivity(view)
+        } catch (_: Exception) {
+            openExternal(a, uri, f.name, chooserTitle)
+        }
+    }
+
+    fun openExternal(a: Activity, uri: Uri, name: String, chooserTitle: String) {
         val view = Intent(Intent.ACTION_VIEW).apply {
             setDataAndType(uri, "application/pdf")
-            clipData = ClipData.newRawUri(f.name, uri)
+            clipData = ClipData.newRawUri(name, uri)
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
         try {
             a.startActivity(view)
         } catch (_: ActivityNotFoundException) {
-            share(a, f, chooserTitle)
+            val send = Intent(Intent.ACTION_SEND).apply {
+                type = "application/pdf"
+                putExtra(Intent.EXTRA_STREAM, uri)
+                clipData = ClipData.newRawUri(name, uri)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+            try {
+                a.startActivity(Intent.createChooser(send, chooserTitle))
+            } catch (_: Exception) {
+            }
         }
     }
 

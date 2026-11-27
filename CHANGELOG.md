@@ -3,6 +3,35 @@
 All notable changes to LitePPTX. Versions follow [semantic versioning](https://semver.org/).
 Release notes for each version live in [`release-notes/`](release-notes/).
 
+## [1.5.0] - 2026-11-27
+
+### Added
+- **Built-in PDF viewer** using Android's `PdfRenderer` (API 21+). Pinch-to-zoom, page jump, share, save, open externally, keep screen on. Registered as a handler for `application/pdf` files.
+- **Speaker notes**: badge on the slide counter, dialog via overflow menu, notes parsed from PPTX `notesSlide` XML.
+- **Slide search** (**⋯ → Search slides**): full-text search across shapes, tables and notes with jump-to-slide.
+- **Share current slide** as a PNG via the system share sheet.
+- **Go to slide** dialog with slider and number input.
+- **Keep screen on** toggle in the overflow menu.
+- **ID card scanning**: 2-sided scan composited onto one A4 page at 200 DPI, with mode selector (Document / ID Card) and undo button.
+- **Recent files** on the start screen with relative timestamps, slide count, remembered scroll position, and clear button.
+- **15+ preset vector shapes** in `SlideRenderer`: right/left/up/down arrows, star5, hexagon, pentagon, chevron, home plate, parallelogram, trapezoid, plus, improved diamond.
+- **Open PDF** tile on the home screen's 2×2 tool grid.
+- Shared `UiHelper.kt` for insets, keep-awake, display names and go-to dialogs.
+- `PdfViewerActivity` with dedicated layout and menu.
+- `RecentStore.kt` for recent-file persistence.
+- 35+ new English and Persian string resources.
+
+### Changed
+- Home screen redesigned: 2×2 tool grid (Scan, ID Card, Images to PDF, Open PDF) replaces the 1×2 row.
+- Back button returns to home instead of exiting when a deck is open.
+- `PdfShareProvider` handles `image/png` for slide sharing.
+- `PptxModels.Slide` gains `notes: String?` and `textContent()`.
+- APK size: ~156 KB (up from ~131 KB). Still zero third-party dependencies.
+
+### Fixed
+- Kept updater download progress compatible with Android 5.0–6.0 (API 21–23).
+- Scoped the display-cutout theme setting to Android 8.1+ (API 27+).
+
 ## [1.4.1] - 2026-11-26
 
 ### Added
@@ -77,6 +106,11 @@ Release notes for each version live in [`release-notes/`](release-notes/).
 ### Added
 - First release: a dependency-free PowerPoint (`.pptx`) viewer for Android 5.0+ with master/layout inheritance, shapes, tables, gradients, bullets, right-to-left text, pinch-to-zoom and a page counter.
 
+[1.5.0]: https://github.com/Evilenor/LitePPTXViewer/releases/tag/v1.5.0
+[1.4.1]: https://github.com/Evilenor/LitePPTXViewer/releases/tag/v1.4.1
+[1.4.0]: https://github.com/Evilenor/LitePPTXViewer/releases/tag/v1.4.0
+[1.3.2]: https://github.com/Evilenor/LitePPTXViewer/releases/tag/v1.3.2
+[1.3.1]: https://github.com/Evilenor/LitePPTXViewer/releases/tag/v1.3.1
 [1.3.0]: https://github.com/Evilenor/LitePPTXViewer/releases/tag/v1.3.0
 [1.2.0]: https://github.com/Evilenor/LitePPTXViewer/commits/main
 [1.1.0]: https://github.com/Evilenor/LitePPTXViewer/commits/main

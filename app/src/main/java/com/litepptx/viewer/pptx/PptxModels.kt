@@ -86,8 +86,29 @@ class Slide(
     val index: Int,
     val bg: Fill?,
     val bgImage: String?,
-    val elements: List<El>
-)
+    val elements: List<El>,
+    val notes: String? = null
+) {
+    /** Extracts readable text across shapes, tables and speaker notes for in-deck search. */
+    fun textContent(): String {
+        val sb = StringBuilder()
+        fun addParas(ps: List<Para>) {
+            for (p in ps) {
+                for (r in p.runs) sb.append(r.text)
+                sb.append(' ')
+            }
+        }
+        for (el in elements) {
+            when (el) {
+                is Shape -> addParas(el.paras)
+                is Tbl -> for (row in el.rows) for (cell in row.cells) if (!cell.merged) addParas(cell.paras)
+                is Pic -> {}
+            }
+        }
+        if (!notes.isNullOrBlank()) sb.append(notes)
+        return sb.toString().replace(Regex("\\s+"), " ").trim()
+    }
+}
 
 class Deck(
     val wEmu: Long,

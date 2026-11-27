@@ -5,6 +5,11 @@ import android.app.AlertDialog
 import android.content.ClipData
 import android.content.Intent
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.graphics.Canvas
+import android.graphics.Color
+import android.graphics.Paint
+import android.graphics.RectF
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -12,7 +17,6 @@ import android.os.Handler
 import android.os.Looper
 import android.provider.MediaStore
 import android.view.View
-import android.view.WindowInsets
 import android.widget.Button
 import android.widget.ImageView
 import android.widget.TextView
@@ -49,6 +53,7 @@ class ScanActivity : Activity() {
     private var rawFile: File? = null
     private var pendingCam: File? = null
     private var fromCamera = false
+    private var idCardMode = false
     private var building = false
 
     private var previewBmp: Bitmap? = null
@@ -65,32 +70,25 @@ class ScanActivity : Activity() {
     private lateinit var busy: View
     private lateinit var tvBusy: TextView
     private lateinit var tvPage: TextView
+    private lateinit var tvScanStep: TextView
+    private lateinit var tvScanHint: TextView
+    private lateinit var modeDoc: TextView
+    private lateinit var modeId: TextView
     private lateinit var bottom: View
     private lateinit var cropBar: View
     private lateinit var filterBar: View
     private lateinit var tvAdjust: TextView
     private lateinit var btnNext: Button
     private lateinit var btnFinish: Button
+    private lateinit var btnUndo: Button
+    private lateinit var btnAddPage: Button
     private lateinit var btnDone: Button
     private lateinit var chips: List<TextView>
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_scan)
-
-        findViewById<View>(R.id.root).setOnApplyWindowInsetsListener { v, insets ->
-            if (Build.VERSION.SDK_INT >= 30) {
-                val i = insets.getInsets(WindowInsets.Type.systemBars() or WindowInsets.Type.displayCutout())
-                v.setPadding(i.left, i.top, i.right, i.bottom)
-            } else {
-                @Suppress("DEPRECATION")
-                v.setPadding(
-                    insets.systemWindowInsetLeft, insets.systemWindowInsetTop,
-                    insets.systemWindowInsetRight, insets.systemWindowInsetBottom
-                )
-            }
-            insets
-        }
+        UiHelper.applyInsets(findViewById(R.id.root))
 
         start = findViewById(R.id.start)
         crop = findViewById(R.id.crop)
@@ -98,17 +96,28 @@ class ScanActivity : Activity() {
         busy = findViewById(R.id.busy)
         tvBusy = findViewById(R.id.tvBusy)
         tvPage = findViewById(R.id.tvPage)
+        tvScanStep = findViewById(R.id.tvScanStep)
+        tvScanHint = findViewById(R.id.tvScanHint)
+        modeDoc = findViewById(R.id.modeDoc)
+        modeId = findViewById(R.id.modeId)
         bottom = findViewById(R.id.bottom)
         cropBar = findViewById(R.id.cropBar)
         filterBar = findViewById(R.id.filterBar)
         tvAdjust = findViewById(R.id.tvAdjust)
         btnNext = findViewById(R.id.btnNext)
         btnFinish = findViewById(R.id.btnFinish)
+        btnUndo = findViewById(R.id.btnUndo)
+        btnAddPage = findViewById(R.id.btnAddPage)
         btnDone = findViewById(R.id.btnDone)
         chips = listOf(
             findViewById(R.id.fOriginal), findViewById(R.id.fClean),
             findViewById(R.id.fBw), findViewById(R.id.fGray)
         )
+
+        idCardMode = savedInstanceState?.getBoolean("idCard")
+            ?: intent.getBooleanExtra(EXTRA_ID_CARD, false)
+        modeDoc.setOnClickListener { setScanMode(false) }
+        modeId.setOnClickListener { setScanMode(true) }
 
         val prefs = getSharedPreferences("scan", MODE_PRIVATE)
         filter = prefs.getInt("filter", ScanFilters.ENHANCED).coerceIn(0, 3)
@@ -123,6 +132,12 @@ class ScanActivity : Activity() {
         findViewById<View>(R.id.btnTake).setOnClickListener { takePhoto() }
         findViewById<View>(R.id.btnGallery).setOnClickListener { pickGallery() }
         btnFinish.setOnClickListener { buildPdf() }
+        btnUndo.setOnClickListener {
+            if (pages.isNotEmpty()) {
+                pages.removeAt(pages.lastIndex).delete()
+                showStart()
+            }
+        }
         findViewById<View>(R.id.btnRetake).setOnClickListener { retake() }
         findViewById<View>(R.id.btnFull).setOnClickListener {
             quad = floatArrayOf(0f, 0f, 1f, 0f, 1f, 1f, 0f, 1f)
@@ -140,8 +155,11 @@ class ScanActivity : Activity() {
             rotation = (rotation + 90) % 360
             renderFilter()
         }
-        findViewById<View>(R.id.btnAddPage).setOnClickListener { finalizePage { afterPage() } }
-        btnDone.setOnClickListener { finalizePage { clearCurrent(); buildPdf() } }
+        btnAddPage.setOnClickListener { finalizePage { afterPage() } }
+        btnDone.setOnClickListener {
+            if (idCardMode && pages.isEmpty()) finalizePage { afterPage() }
+            else finalizePage { clearCurrent(); buildPdf() }
+        }
 
         val dir = ScanProvider.dir(this)
         dir.listFiles()?.forEach {
@@ -169,6 +187,7 @@ class ScanActivity : Activity() {
         outState.putString("cam", pendingCam?.name)
         outState.putString("raw", rawFile?.name)
         outState.putBoolean("fromCamera", fromCamera)
+        outState.putBoolean("idCard", idCardMode)
     }
 
     override fun onDestroy() {
@@ -205,6 +224,22 @@ class ScanActivity : Activity() {
 
     // ------------------------------------------------------------------ screens
 
+    private fun setScanMode(idCard: Boolean) {
+        if (pages.isNotEmpty() || idCardMode == idCard) return
+        idCardMode = idCard
+        showStart()
+    }
+
+    private fun paintMode() {
+        val lock = pages.isNotEmpty()
+        modeDoc.alpha = if (lock && idCardMode) 0.45f else 1f
+        modeId.alpha = if (lock && !idCardMode) 0.45f else 1f
+        modeDoc.setBackgroundResource(if (!idCardMode) R.drawable.bg_seg_on else R.drawable.bg_seg_off)
+        modeId.setBackgroundResource(if (idCardMode) R.drawable.bg_seg_on else R.drawable.bg_seg_off)
+        modeDoc.setTextColor(if (!idCardMode) 0xFFFFFFFF.toInt() else 0xFFB4B9C4.toInt())
+        modeId.setTextColor(if (idCardMode) 0xFFFFFFFF.toInt() else 0xFFB4B9C4.toInt())
+    }
+
     private fun showStart() {
         stage = Stage.START
         gen++
@@ -214,8 +249,21 @@ class ScanActivity : Activity() {
         bottom.visibility = View.GONE
         busy.visibility = View.GONE
         tvPage.visibility = View.GONE
-        btnFinish.visibility = if (pages.isEmpty()) View.GONE else View.VISIBLE
-        btnFinish.text = getString(R.string.pdf_create_n, pages.size)
+        paintMode()
+        if (idCardMode) {
+            tvScanStep.visibility = View.VISIBLE
+            tvScanStep.setText(if (pages.isEmpty()) R.string.scan_id_front else R.string.scan_id_back)
+            tvScanHint.setText(R.string.scan_id_hint)
+            val ready = pages.size >= 2
+            btnFinish.visibility = if (ready) View.VISIBLE else View.GONE
+            btnFinish.text = getString(R.string.pdf_create_n, 1)
+        } else {
+            tvScanStep.visibility = View.GONE
+            tvScanHint.setText(R.string.scan_hint)
+            btnFinish.visibility = if (pages.isEmpty()) View.GONE else View.VISIBLE
+            btnFinish.text = getString(R.string.pdf_create_n, pages.size)
+        }
+        btnUndo.visibility = if (pages.isEmpty()) View.GONE else View.VISIBLE
     }
 
     private fun showCrop() {
@@ -241,12 +289,23 @@ class ScanActivity : Activity() {
         cropBar.visibility = View.GONE
         filterBar.visibility = View.VISIBLE
         busy.visibility = View.GONE
-        btnDone.text = getString(R.string.pdf_create_n, pages.size + 1)
+        if (idCardMode && pages.isEmpty()) {
+            btnAddPage.visibility = View.GONE
+            btnDone.setText(R.string.scan_id_back)
+        } else {
+            btnAddPage.visibility = if (idCardMode) View.GONE else View.VISIBLE
+            val pdfPages = if (idCardMode) 1 else pages.size + 1
+            btnDone.text = getString(R.string.pdf_create_n, pdfPages)
+        }
         pageLabel()
     }
 
     private fun pageLabel() {
-        tvPage.text = getString(R.string.scan_page_n, pages.size + 1)
+        if (idCardMode) {
+            tvPage.setText(if (pages.isEmpty()) R.string.scan_id_front else R.string.scan_id_back)
+        } else {
+            tvPage.text = getString(R.string.scan_page_n, pages.size + 1)
+        }
         tvPage.visibility = View.VISIBLE
     }
 
@@ -575,17 +634,25 @@ class ScanActivity : Activity() {
     private fun buildPdf() {
         if (building || pages.isEmpty()) return
         building = true
-        val list = pages.map { PdfBuilder.Item(ScanProvider.uriFor(it.name)) }
-        val n = list.size
         val ctx = applicationContext
-        val name = "Scan_" + SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date()) + ".pdf"
-        setBusy(R.string.pdf_working, 1, n)
+        val prefix = if (idCardMode && pages.size >= 2) "ID_" else "Scan_"
+        val name = prefix + SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date()) + ".pdf"
+        val expected = if (idCardMode && pages.size >= 2) 1 else pages.size
+        setBusy(R.string.pdf_working, 1, expected)
         bg {
             var res: PdfBuilder.Result? = null
             var failed = false
+            var sheet: File? = null
             val dir = File(ctx.cacheDir, "pdf").apply { mkdirs() }
             val f = File(dir, name)
             try {
+                val list = if (idCardMode && pages.size >= 2) {
+                    sheet = composeIdSheet(pages[0], pages[1])
+                    listOf(PdfBuilder.Item(ScanProvider.uriFor(sheet.name)))
+                } else {
+                    pages.map { PdfBuilder.Item(ScanProvider.uriFor(it.name)) }
+                }
+                val n = list.size
                 // The pages are already cleaned JPEGs, so they go in untouched ("Original").
                 res = PdfBuilder.build(
                     ctx, list, PdfBuilder.Options(PdfBuilder.PAGE_AUTO, 0, 0), f, name.removeSuffix(".pdf"),
@@ -595,6 +662,8 @@ class ScanActivity : Activity() {
             } catch (t: Throwable) {
                 android.util.Log.w("LitePPTX", "scan pdf failed", t)
                 failed = true
+            } finally {
+                sheet?.delete()
             }
             val r = res
             ui.post {
@@ -630,8 +699,48 @@ class ScanActivity : Activity() {
         }
     }
 
+    /** Places front and back card scans centered on one crisp 200-DPI A4 page. */
+    private fun composeIdSheet(front: File, back: File): File {
+        val w = 1654
+        val h = 2339
+        val out = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
+        val c = Canvas(out)
+        c.drawColor(Color.WHITE)
+        val paint = Paint(Paint.FILTER_BITMAP_FLAG or Paint.ANTI_ALIAS_FLAG)
+        val marginX = 180f
+        val marginY = 200f
+        val gap = 140f
+        val slotW = w - 2f * marginX
+        val slotH = (h - 2f * marginY - gap) / 2f
+
+        fun drawSlot(file: File, top: Float) {
+            val b = BitmapFactory.decodeFile(file.path) ?: return
+            try {
+                val s = minOf(slotW / b.width, slotH / b.height)
+                val dw = b.width * s
+                val dh = b.height * s
+                val left = (w - dw) / 2f
+                val y = top + (slotH - dh) / 2f
+                c.drawBitmap(b, null, RectF(left, y, left + dw, y + dh), paint)
+            } finally {
+                b.recycle()
+            }
+        }
+
+        drawSlot(front, marginY)
+        drawSlot(back, marginY + slotH + gap)
+        val f = File(ScanProvider.dir(this), "id_" + System.currentTimeMillis() + ".jpg")
+        try {
+            ScanImage.saveJpeg(out, f, 88)
+        } finally {
+            out.recycle()
+        }
+        return f
+    }
+
     companion object {
         const val EXTRA_AUTO = "auto"
+        const val EXTRA_ID_CARD = "id_card"
         private const val REQ_CAM = 3001
         private const val REQ_PICK = 3002
         private const val REQ_SAVE = 3003

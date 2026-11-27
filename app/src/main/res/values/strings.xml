@@ -102,4 +102,56 @@
     <string name="scan_discard_msg">%1$d scanned pages will be lost.</string>
     <string name="scan_discard">Discard</string>
     <string name="scan_keep">Keep</string>
+
+    <string name="home_open_sub">Opens instantly, works offline</string>
+    <string name="home_scan_sub">Camera to clean PDF</string>
+    <string name="home_pdf_sub">Photos into one PDF</string>
+    <string name="recent_title">Recent</string>
+    <string name="recent_clear">Clear</string>
+    <plurals name="recent_slides">
+        <item quantity="one">%d slide</item>
+        <item quantity="other">%d slides</item>
+    </plurals>
+    <string name="recent_meta">%1$s · %2$s</string>
+    <string name="recent_resume">Slide %1$d of %2$d · %3$s</string>
+    <string name="recent_gone">That file is no longer available</string>
+    <string name="menu_goto">Go to slide…</string>
+    <string name="goto_title">Go to slide</string>
+    <string name="goto_hint">1 – %1$d</string>
+    <string name="goto_go">Go</string>
+    <string name="menu_keep_awake">Keep screen on</string>
+
+    <string name="home_id_card">ID Card Scan</string>
+    <string name="home_id_card_sub">Front &amp; back on 1 A4</string>
+    <string name="home_open_pdf">Open PDF</string>
+    <string name="home_open_pdf_sub">Fast offline reader</string>
+    <string name="time_now">just now</string>
+    <string name="time_min">%1$dm ago</string>
+    <string name="time_hour">%1$dh ago</string>
+    <string name="time_day">%1$dd ago</string>
+
+    <string name="menu_search">Search slides…</string>
+    <string name="search_hint">Find text in presentation…</string>
+    <string name="search_none">No matching slides found</string>
+    <string name="search_match">Slide %1$d · %2$s</string>
+    <string name="menu_notes">Speaker notes</string>
+    <string name="notes_title">Notes · Slide %1$d</string>
+    <string name="notes_empty">No speaker notes on this slide</string>
+    <string name="notes_badge">Notes</string>
+    <string name="menu_share_slide">Share current slide</string>
+
+    <string name="scan_mode_doc">Document</string>
+    <string name="scan_mode_id">ID Card (2-sided)</string>
+    <string name="scan_id_hint">Scan the front and back of an ID card to place both neatly on one A4 page.</string>
+    <string name="scan_id_front">Front of card</string>
+    <string name="scan_id_back">Back of card</string>
+    <string name="scan_undo">Undo last page</string>
+
+    <string name="pdf_viewer_title">PDF Viewer</string>
+    <string name="pdf_error_open">Could not open this PDF file.</string>
+    <string name="menu_open_external">Open with another app</string>
+    <string name="menu_save_downloads">Save to Downloads</string>
+    <string name="goto_page_title">Go to page</string>
+    <string name="pdf_select_hint">Tap a photo to move, rotate or remove</string>
+    <string name="pdf_selected_n">Page %1$d selected</string>
 </resources>

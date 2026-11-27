@@ -149,7 +149,11 @@ object Updater {
         val c = open(info.apkUrl)
         try {
             if (c.responseCode != 200) throw IOException("HTTP ${c.responseCode}")
-            val total = if (c.contentLengthLong > 0) c.contentLengthLong else info.size
+            // URLConnection.contentLengthLong is only available on API 24+, while the
+            // app supports API 21. APKs are far below Int.MAX_VALUE, so use the
+            // compatible property and keep the updater working on older devices.
+            val contentLength = c.contentLength
+            val total = if (contentLength > 0) contentLength.toLong() else info.size
             var done = 0L
             var last = 0L
             c.inputStream.use { input ->

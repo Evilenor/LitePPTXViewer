@@ -138,12 +138,25 @@ class SlideRenderer(private val deck: Deck) {
                 p.moveTo(r.left, r.top); p.lineTo(r.right, r.bottom); p.lineTo(r.left, r.bottom); p.close()
                 c.drawPath(p, paint)
             }
-            "diamond" -> {
-                val p = Path()
-                p.moveTo(r.centerX(), r.top); p.lineTo(r.right, r.centerY())
-                p.lineTo(r.centerX(), r.bottom); p.lineTo(r.left, r.centerY()); p.close()
-                c.drawPath(p, paint)
+            "diamond" -> c.drawPath(poly(r, 0.5f, 0f, 1f, 0.5f, 0.5f, 1f, 0f, 0.5f), paint)
+            "parallelogram" -> {
+                val d = ((if (s.adj >= 0f) s.adj / 100000f else 0.25f) * minOf(r.width(), r.height()) / maxOf(r.width(), 1f)).coerceIn(0f, 0.5f)
+                c.drawPath(poly(r, d, 0f, 1f, 0f, 1f - d, 1f, 0f, 1f), paint)
             }
+            "trapezoid" -> {
+                val d = ((if (s.adj >= 0f) s.adj / 100000f else 0.25f) * minOf(r.width(), r.height()) / maxOf(r.width(), 1f)).coerceIn(0f, 0.5f)
+                c.drawPath(poly(r, d, 0f, 1f - d, 0f, 1f, 1f, 0f, 1f), paint)
+            }
+            "pentagon" -> c.drawPath(poly(r, 0.5f, 0f, 1f, 0.38f, 0.81f, 1f, 0.19f, 1f, 0f, 0.38f), paint)
+            "hexagon" -> c.drawPath(poly(r, 0.25f, 0f, 0.75f, 0f, 1f, 0.5f, 0.75f, 1f, 0.25f, 1f, 0f, 0.5f), paint)
+            "homePlate" -> c.drawPath(poly(r, 0f, 0f, 0.75f, 0f, 1f, 0.5f, 0.75f, 1f, 0f, 1f), paint)
+            "chevron" -> c.drawPath(poly(r, 0f, 0f, 0.75f, 0f, 1f, 0.5f, 0.75f, 1f, 0f, 1f, 0.25f, 0.5f), paint)
+            "rightArrow" -> c.drawPath(poly(r, 0f, 0.25f, 0.6f, 0.25f, 0.6f, 0f, 1f, 0.5f, 0.6f, 1f, 0.6f, 0.75f, 0f, 0.75f), paint)
+            "leftArrow" -> c.drawPath(poly(r, 1f, 0.25f, 0.4f, 0.25f, 0.4f, 0f, 0f, 0.5f, 0.4f, 1f, 0.4f, 0.75f, 1f, 0.75f), paint)
+            "upArrow" -> c.drawPath(poly(r, 0.5f, 0f, 1f, 0.4f, 0.75f, 0.4f, 0.75f, 1f, 0.25f, 1f, 0.25f, 0.4f, 0f, 0.4f), paint)
+            "downArrow" -> c.drawPath(poly(r, 0.25f, 0f, 0.75f, 0f, 0.75f, 0.6f, 1f, 0.6f, 0.5f, 1f, 0f, 0.6f, 0.25f, 0.6f), paint)
+            "plus" -> c.drawPath(poly(r, 0.35f, 0f, 0.65f, 0f, 0.65f, 0.35f, 1f, 0.35f, 1f, 0.65f, 0.65f, 0.65f, 0.65f, 1f, 0.35f, 1f, 0.35f, 0.65f, 0f, 0.65f, 0f, 0.35f, 0.35f, 0.35f), paint)
+            "star5" -> c.drawPath(poly(r, 0.5f, 0f, 0.618f, 0.363f, 1f, 0.363f, 0.691f, 0.588f, 0.809f, 0.951f, 0.5f, 0.727f, 0.191f, 0.951f, 0.309f, 0.588f, 0f, 0.363f, 0.382f, 0.363f), paint)
             "cust" -> {
                 val cp = s.path ?: return
                 val p = Path()
@@ -162,6 +175,18 @@ class SlideRenderer(private val deck: Deck) {
             }
             else -> c.drawRect(r, paint)
         }
+    }
+
+    private fun poly(r: RectF, vararg pts: Float): Path {
+        val p = Path()
+        p.moveTo(r.left + pts[0] * r.width(), r.top + pts[1] * r.height())
+        var i = 2
+        while (i < pts.size) {
+            p.lineTo(r.left + pts[i] * r.width(), r.top + pts[i + 1] * r.height())
+            i += 2
+        }
+        p.close()
+        return p
     }
 
     // ------------------------------------------------------------------ pictures

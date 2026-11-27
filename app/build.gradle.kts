@@ -15,8 +15,8 @@ android {
         applicationId = "com.litepptx.viewer"
         minSdk = 21
         targetSdk = 35
-        versionCode = 8
-        versionName = "1.4.1"
+        versionCode = 9
+        versionName = "1.5.0"
     }
 
     signingConfigs {
@@ -58,8 +58,8 @@ android {
     }
 
     lint {
-        checkReleaseBuilds = false
-        abortOnError = false
+        checkReleaseBuilds = true
+        abortOnError = true
     }
 
     dependenciesInfo {

@@ -1,0 +1,21 @@
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/action_goto"
+        android:title="@string/menu_goto" />
+    <item
+        android:id="@+id/action_share"
+        android:title="@string/share" />
+    <item
+        android:id="@+id/action_save"
+        android:title="@string/menu_save_downloads" />
+    <item
+        android:id="@+id/action_open_ext"
+        android:title="@string/menu_open_external" />
+    <item
+        android:id="@+id/action_reset_zoom"
+        android:title="@string/menu_reset_zoom" />
+    <item
+        android:id="@+id/action_keep_awake"
+        android:checkable="true"
+        android:title="@string/menu_keep_awake" />
+</menu>

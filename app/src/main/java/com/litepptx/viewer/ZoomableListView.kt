@@ -45,6 +45,8 @@ class ZoomableListView @JvmOverloads constructor(
         }
     )
 
+    fun isZoomed(): Boolean = scale > 1.001f
+
     fun resetZoom() {
         scale = 1f
         tx = 0f

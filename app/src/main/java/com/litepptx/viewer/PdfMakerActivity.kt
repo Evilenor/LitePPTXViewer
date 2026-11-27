@@ -1,7 +1,6 @@
 package com.litepptx.viewer
 
 import android.app.Activity
-import android.content.ActivityNotFoundException
 import android.content.ClipData
 import android.content.ContentValues
 import android.content.Context
@@ -21,7 +20,6 @@ import android.util.LruCache
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
-import android.view.WindowInsets
 import android.widget.BaseAdapter
 import android.widget.Button
 import android.widget.GridView
@@ -30,6 +28,7 @@ import android.widget.LinearLayout
 import android.widget.PopupMenu
 import android.widget.TextView
 import android.widget.Toast
+import com.litepptx.viewer.pdf.PdfActions
 import com.litepptx.viewer.pdf.PdfBuilder
 import com.litepptx.viewer.pdf.PdfShareProvider
 import java.io.File
@@ -53,6 +52,7 @@ class PdfMakerActivity : Activity() {
     private lateinit var busy: View
     private lateinit var tvBusy: TextView
     private lateinit var tvQDesc: TextView
+    private lateinit var tvSelHint: TextView
     private lateinit var btnCreate: Button
     private lateinit var strip: List<View>
     private lateinit var adapter: ThumbAdapter
@@ -73,20 +73,7 @@ class PdfMakerActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_pdf)
-
-        findViewById<View>(R.id.root).setOnApplyWindowInsetsListener { v, insets ->
-            if (Build.VERSION.SDK_INT >= 30) {
-                val i = insets.getInsets(WindowInsets.Type.systemBars() or WindowInsets.Type.displayCutout())
-                v.setPadding(i.left, i.top, i.right, i.bottom)
-            } else {
-                @Suppress("DEPRECATION")
-                v.setPadding(
-                    insets.systemWindowInsetLeft, insets.systemWindowInsetTop,
-                    insets.systemWindowInsetRight, insets.systemWindowInsetBottom
-                )
-            }
-            insets
-        }
+        UiHelper.applyInsets(findViewById(R.id.root))
 
         grid = findViewById(R.id.grid)
         empty = findViewById(R.id.empty)
@@ -95,6 +82,7 @@ class PdfMakerActivity : Activity() {
         busy = findViewById(R.id.busy)
         tvBusy = findViewById(R.id.tvBusy)
         tvQDesc = findViewById(R.id.tvQDesc)
+        tvSelHint = findViewById(R.id.tvSelHint)
         btnCreate = findViewById(R.id.btnCreate)
 
         val prefs = getSharedPreferences("pdf", Context.MODE_PRIVATE)
@@ -285,6 +273,10 @@ class PdfMakerActivity : Activity() {
         strip[2].isEnabled = sel
         strip[3].isEnabled = sel && selected < items.size - 1
         for (v in strip) v.alpha = if (v.isEnabled) 1f else 0.3f
+        tvSelHint.text = if (sel) getString(R.string.pdf_selected_n, selected + 1) else getString(R.string.pdf_select_hint)
+        tvSelHint.setTextColor(
+            resources.getColor(if (sel) R.color.accent_blue else R.color.text_secondary)
+        )
     }
 
     private fun move(d: Int) {
@@ -507,17 +499,7 @@ class PdfMakerActivity : Activity() {
 
     private fun openPdf() {
         val f = pdfFile ?: return
-        val uri = PdfShareProvider.uriFor(f.name)
-        val view = Intent(Intent.ACTION_VIEW).apply {
-            setDataAndType(uri, "application/pdf")
-            clipData = ClipData.newRawUri(f.name, uri)
-            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-        }
-        try {
-            startActivity(view)
-        } catch (_: ActivityNotFoundException) {
-            sharePdf()
-        }
+        PdfActions.open(this, f, getString(R.string.share))
     }
 
     private fun savePdf() {

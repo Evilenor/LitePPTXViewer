@@ -59,26 +59,67 @@
         android:layout_height="0dp"
         android:layout_weight="1">
 
-        <!-- Start: take a photo or pick one -->
+        <!-- Start: mode selector + take a photo or pick one -->
         <LinearLayout
             android:id="@+id/start"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:gravity="center"
             android:orientation="vertical"
-            android:padding="32dp">
+            android:padding="28dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="38dp"
+                android:layout_marginBottom="22dp"
+                android:background="@drawable/bg_tile"
+                android:orientation="horizontal"
+                android:padding="3dp">
+
+                <TextView
+                    android:id="@+id/modeDoc"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1"
+                    android:gravity="center"
+                    android:text="@string/scan_mode_doc"
+                    android:textSize="13sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/modeId"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1"
+                    android:gravity="center"
+                    android:text="@string/scan_mode_id"
+                    android:textSize="13sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
 
             <ImageView
-                android:layout_width="72dp"
-                android:layout_height="72dp"
+                android:id="@+id/ivScanHero"
+                android:layout_width="68dp"
+                android:layout_height="68dp"
                 android:importantForAccessibility="no"
                 android:src="@drawable/ic_scan"
                 android:tint="@color/accent_blue" />
 
             <TextView
+                android:id="@+id/tvScanStep"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
+                android:layout_marginTop="12dp"
+                android:textColor="@color/white"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:visibility="gone" />
+
+            <TextView
+                android:id="@+id/tvScanHint"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
                 android:gravity="center"
                 android:text="@string/scan_hint"
                 android:textColor="@color/text_secondary"
@@ -118,7 +159,7 @@
                 android:id="@+id/btnFinish"
                 android:layout_width="wrap_content"
                 android:layout_height="44dp"
-                android:layout_marginTop="26dp"
+                android:layout_marginTop="22dp"
                 android:background="@drawable/bg_btn_donate"
                 android:drawableStart="@drawable/ic_check"
                 android:drawablePadding="10dp"
@@ -127,6 +168,20 @@
                 android:textAllCaps="false"
                 android:textColor="@color/white"
                 android:textSize="14sp"
+                android:visibility="gone" />
+
+            <Button
+                android:id="@+id/btnUndo"
+                android:layout_width="wrap_content"
+                android:layout_height="38dp"
+                android:layout_marginTop="8dp"
+                android:background="@null"
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp"
+                android:text="@string/scan_undo"
+                android:textAllCaps="false"
+                android:textColor="@color/text_secondary"
+                android:textSize="13sp"
                 android:visibility="gone" />
         </LinearLayout>
 

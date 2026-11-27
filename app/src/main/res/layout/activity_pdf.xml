@@ -237,6 +237,15 @@
                 android:src="@drawable/ic_chev_right" />
         </LinearLayout>
 
+        <TextView
+            android:id="@+id/tvSelHint"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="@string/pdf_select_hint"
+            android:textColor="@color/text_secondary"
+            android:textSize="12sp" />
+
         <LinearLayout
             android:id="@+id/settings"
             android:layout_width="match_parent"

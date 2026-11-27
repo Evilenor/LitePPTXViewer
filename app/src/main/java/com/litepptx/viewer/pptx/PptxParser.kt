@@ -185,7 +185,29 @@ class PptxParser(private val zip: ZipFile, private val file: File? = null) {
         if (bg == null && layout != null) bg = bgOf(layout.root, m, layout.rels)
         if (bg == null) bg = bgOf(m.root, m, m.rels)
         val fill = bg?.first ?: if (bg?.second != null) null else Fill(scheme(m, "bg1") ?: Color.WHITE)
-        return Slide(index, fill, bg?.second, els)
+        val notesPath = rl.values.firstOrNull { it.type.endsWith("/notesSlide") }?.target
+        val notes = notesPath?.let { parseNotes(it) }
+        return Slide(index, fill, bg?.second, els, notes)
+    }
+
+    private fun parseNotes(path: String): String? {
+        val tree = dom(path, false)?.path("cSld", "spTree") ?: return null
+        val paras = ArrayList<String>()
+        for (sp in tree.children("sp")) {
+            val phType = sp.path("nvSpPr", "nvPr", "ph")?.a("type")
+            if (phType == "sldNum" || phType == "sldImg" || phType == "hdr" || phType == "ftr") continue
+            val tx = sp.child("txBody") ?: continue
+            for (p in tx.children("p")) {
+                val sb = StringBuilder()
+                for (k in p.kids) {
+                    if (k.name == "r" || k.name == "fld") sb.append(k.child("t")?.text ?: "")
+                    else if (k.name == "br") sb.append('\n')
+                }
+                val line = sb.toString().trim()
+                if (line.isNotEmpty()) paras.add(line)
+            }
+        }
+        return if (paras.isEmpty()) null else paras.joinToString("\n\n")
     }
 
     private fun bgOf(root: Node, m: Master, rl: Map<String, Rel>): Pair<Fill?, String?>? {
