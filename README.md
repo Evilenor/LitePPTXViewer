@@ -5,8 +5,8 @@
 <h1 align="center">LitePPTX</h1>
 
 <p align="center">
-  <b>A featherweight PowerPoint viewer, PDF viewer, document &amp; ID-card scanner and photo-to-PDF maker for Android.</b><br>
-  About 156&nbsp;KB. Zero dependencies. No ads, no accounts, no tracking.
+  <b>A featherweight PowerPoint viewer, universal document viewer, PDF viewer and tools, document &amp; ID-card scanner and photo-to-PDF maker for Android.</b><br>
+  Still under ~250&nbsp;KB (to verify from CI). Zero dependencies. No ads, no accounts, no tracking.
 </p>
 
 <p align="center">
@@ -37,7 +37,7 @@ Opening a `.pptx` someone sent you in a chat shouldn't need a 300&nbsp;MB office
 
 | | |
 |---|---|
-| **Tiny** | The release APK is about 156&nbsp;KB. Only Android platform APIs are used. There is not a single third-party library. |
+| **Tiny** | The release APK is still under ~250&nbsp;KB (to verify from CI). Only Android platform APIs are used. There is not a single third-party library. |
 | **Fast** | Slides are rendered lazily, only when they scroll into view, and cached. Opening a deck takes about a second on an emulator. |
 | **Private** | No analytics, no ads, no permissions to read your files. Your documents never leave the phone. |
 | **Self-updating** | The app notices new releases by itself and keeps a dot on the **⋯** button until you update. Download once: it is remembered, verified, and offered for install even after you close the app. |
@@ -59,13 +59,25 @@ Opening a `.pptx` someone sent you in a chat shouldn't need a 300&nbsp;MB office
 - **Export as PDF** (**⋯ > Export as PDF**): every slide is rendered to a page, then you can save, open or share the file.
 - **Recent files** on the start screen with relative timestamps, slide count and remembered position.
 
+### Universal document viewer
+Open a file someone sent you without installing an office suite: **Open document** on the start screen, in the menu, or from any app's *Share* menu.
+
+- **Word (`.docx`):** styles and headings, bullets and numbering, tables, right-to-left text, inline images.
+- **Sheets (`.xlsx`, `.csv`):** sheet tabs, A/B/C column headers, column widths, cell colours, merged cells, Excel-style date and percent formatting, go-to-row. CSV files open as a single sheet with a bold header row.
+- **Plain text:** `.txt`, `.rtf` (bold/italic/underline, Unicode escapes) and Markdown (headings, bullets, `**bold**`, `*italic*`, `` `code` ``).
+- **Legacy Office, text-only:** old `.doc`, `.ppt` and `.xls` files open as recovered plain text, with a clear note that formatting, tables and images are lost.
+- **Everywhere:** full-text search, text size 0.8–1.6×, pinch-to-zoom, share the original file, open externally, keep screen on, and recent files with block/row counts.
+- Limits, stated up front in the app: XLSX is capped at 5,000 rows / 100 columns, DOCX at 2,000 blocks.
+
 ### Document & ID-card scanner
 A CamScanner-style scanner with no account, no ads and no upload: **Scan document** on the start screen, in the menu, or as a launcher shortcut.
 
 - **Take photos or pick them** from the gallery, several pages in a row. The photo is taken by your phone's own camera app, so LitePPTX needs **no camera permission**.
 - **Automatic page detection** proposes the outline of the paper, and you can drag the four corners to fix it (or tap *Full photo* / *Auto*). The page is straightened (perspective corrected) on the device.
-- **Filters:** *Original*, *Clean* (removes shadows and evens out the paper), *B&W* and *Gray*, with a live preview. Rotate any page.
+- **Filters:** *Original*, *Clean* (removes shadows and evens out the paper), *B&W*, *Gray* and *Magic* (stronger levels, saturation boost and light sharpening for dull pages), with a live preview. Rotate any page.
 - **Undo**: remove the last captured page without starting over.
+- **Save images**: every captured page can also be saved as a JPEG in Downloads.
+- **PDF quality choice**: pick *Original*, *Smart* or *Small* before building the scan PDF (remembered for next time).
 - **ID-card mode**: capture front and back of an ID card, then both sides are composited onto one A4 page at 200 DPI — ready for forms, applications and photocopies.
 - **Create PDF** from all the pages, then save to Downloads, open or share. Each page is stored as a JPEG with a long edge of up to 2600&nbsp;px, which keeps text sharp and files small.
 - All the image processing is our own code, with no ML library and no Google Play Services, so it works on any phone.
@@ -100,6 +112,14 @@ Open any PDF from a file manager, browser, or the *Open PDF* tile on the start s
 - **Keep screen on** toggle.
 - LitePPTX registers itself as a PDF handler, so tapping any `.pdf` file can open it directly.
 
+### PDF tools
+**PDF Tools** on the start screen (or in the menu): compress, merge and split PDFs, all offline.
+
+- **Compress:** tries a lossless rebuild first. It re-deflates the compressed streams inside classic xref-table PDFs and only keeps the result when it saves at least 5% — text stays text. If that cannot help, it offers a rendered rebuild at Keep (200 dpi), Balanced (170 dpi) or Small (130 dpi), and says plainly that every page becomes an image.
+- **Merge:** pick two or more PDFs; they are joined in the order you picked them.
+- **Split:** pick a page range and get just those pages as a new PDF.
+- Every result can be shared, saved to Downloads or opened in the viewer.
+
 ### Updates
 - Checks GitHub Releases at most every 6 hours (and on demand from **⋯ > Check for updates**).
 - Tap the update bar to read *What's new*, then **Update**.
@@ -119,6 +139,8 @@ Requires **Android 5.0 (API 21)** or newer. Integrity: each release ships a `.sh
 
 - **View a presentation:** open any `.pptx` file, or launch the app and tap *Open PowerPoint*. Use the overflow menu for speaker notes, slide search, go-to, share, and export.
 - **View a PDF:** open any `.pdf` file, or tap *Open PDF* on the start screen.
+- **View a document:** open any `.docx`, `.xlsx`, `.txt`, `.csv`, `.rtf` or `.md` file, or tap *Open document* on the start screen. Old `.doc`/`.ppt`/`.xls` files open as plain text.
+- **Shrink, join or cut a PDF:** tap *PDF Tools*, pick *Compress*, *Merge* or *Split*, and choose a quality preset for rebuilds.
 - **Scan a document:** tap *Scan document*, take or pick photos, adjust the corners, choose a filter, then *Create PDF*. For ID cards, tap *ID Card* for a 2-sided scan onto one page. Long-press the app icon for a shortcut.
 - **Make a PDF from photos:** select images in Gallery / Photos / Files, tap *Share*, choose **Create PDF**. Or long-press the app icon and pick *Images to PDF*.
 
@@ -128,7 +150,9 @@ LitePPTX is deliberately minimal:
 
 - Charts and SmartArt are not rendered; some less common preset shapes may fall back to rectangles.
 - Animations, transitions and embedded fonts are ignored (system fonts are used).
-- Only `.pptx` is supported, not legacy `.ppt`.
+- Only `.pptx` is supported, not legacy `.ppt` — but legacy `.doc`/`.ppt`/`.xls` open as plain text in the document viewer.
+- Lossless PDF compression only works on classic xref-table PDFs; other PDFs fall back to a rendered rebuild, which turns pages into images (text can no longer be selected).
+- XLSX is capped at 5,000 rows / 100 columns and DOCX at 2,000 blocks; the viewer says so when the cap is hit.
 - Page reordering uses the ◀ ▶ buttons rather than drag and drop.
 - The scanner has **no OCR** (no searchable text). Automatic edge detection works best on a plain background; on a busy one, drag the corners by hand.
 - On very low-memory phones the scanner reduces the page resolution automatically; this has only been tested on an emulator so far.
@@ -155,11 +179,14 @@ Run `./gradlew assembleRelease lintRelease` to build the release APK and run And
 ```
 app/src/main/java/com/litepptx/viewer/
   MainActivity.kt        viewer screen, update bar
+  OfficeViewerActivity.kt  Word / Sheets / plain-text viewer
+  PdfToolsActivity.kt    compress, merge and split PDFs
   PdfMakerActivity.kt    Images to PDF editor and share target
   ScanActivity.kt        document scanner: capture, crop, filter, PDF
   scan/                  page detection, perspective warp, filters, crop view
   pptx/                  PPTX parser and slide renderer (pure Android APIs)
-  pdf/                   streaming PDF writer, image pipeline, slide-to-PDF export, file provider
+  office/                OOXML package, DOCX/XLSX parsers, legacy text fallback, plain-text formats
+  pdf/                   streaming PDF writer, image pipeline, slide-to-PDF export, file provider, PDF tools
   update/Updater.kt      GitHub Releases updater
 ```
 

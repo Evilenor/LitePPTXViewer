@@ -170,19 +170,39 @@
                 android:textSize="14sp"
                 android:visibility="gone" />
 
-            <Button
-                android:id="@+id/btnUndo"
+            <LinearLayout
                 android:layout_width="wrap_content"
-                android:layout_height="38dp"
+                android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
-                android:background="@null"
-                android:paddingStart="16dp"
-                android:paddingEnd="16dp"
-                android:text="@string/scan_undo"
-                android:textAllCaps="false"
-                android:textColor="@color/text_secondary"
-                android:textSize="13sp"
-                android:visibility="gone" />
+                android:gravity="center"
+                android:orientation="horizontal">
+
+                <Button
+                    android:id="@+id/btnUndo"
+                    android:layout_width="wrap_content"
+                    android:layout_height="38dp"
+                    android:background="@null"
+                    android:paddingStart="16dp"
+                    android:paddingEnd="16dp"
+                    android:text="@string/scan_undo"
+                    android:textAllCaps="false"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="13sp"
+                    android:visibility="gone" />
+
+                <Button
+                    android:id="@+id/btnSaveImages"
+                    android:layout_width="wrap_content"
+                    android:layout_height="38dp"
+                    android:background="@null"
+                    android:paddingStart="16dp"
+                    android:paddingEnd="16dp"
+                    android:text="@string/scan_save_images"
+                    android:textAllCaps="false"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="13sp"
+                    android:visibility="gone" />
+            </LinearLayout>
         </LinearLayout>
 
         <com.litepptx.viewer.scan.CropView
@@ -340,7 +360,7 @@
                     android:gravity="center"
                     android:maxLines="1"
                     android:text="@string/scan_f_original"
-                    android:textSize="13sp" />
+                    android:textSize="12sp" />
 
                 <TextView
                     android:id="@+id/fClean"
@@ -352,7 +372,7 @@
                     android:gravity="center"
                     android:maxLines="1"
                     android:text="@string/scan_f_clean"
-                    android:textSize="13sp" />
+                    android:textSize="12sp" />
 
                 <TextView
                     android:id="@+id/fBw"
@@ -364,18 +384,30 @@
                     android:gravity="center"
                     android:maxLines="1"
                     android:text="@string/scan_f_bw"
-                    android:textSize="13sp" />
+                    android:textSize="12sp" />
 
                 <TextView
                     android:id="@+id/fGray"
                     android:layout_width="0dp"
                     android:layout_height="match_parent"
                     android:layout_marginStart="2dp"
+                    android:layout_marginEnd="2dp"
                     android:layout_weight="1"
                     android:gravity="center"
                     android:maxLines="1"
                     android:text="@string/scan_f_gray"
-                    android:textSize="13sp" />
+                    android:textSize="12sp" />
+
+                <TextView
+                    android:id="@+id/fMagic"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_marginStart="2dp"
+                    android:layout_weight="1"
+                    android:gravity="center"
+                    android:maxLines="1"
+                    android:text="@string/scan_f_magic"
+                    android:textSize="12sp" />
             </LinearLayout>
 
             <LinearLayout

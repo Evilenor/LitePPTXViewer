@@ -154,4 +154,56 @@
     <string name="goto_page_title">Go to page</string>
     <string name="pdf_select_hint">Tap a photo to move, rotate or remove</string>
     <string name="pdf_selected_n">Page %1$d selected</string>
+
+    <string name="office_viewer_title">Document Viewer</string>
+    <string name="open_doc">Open document</string>
+    <string name="home_pdf_tools">PDF Tools</string>
+    <string name="home_pdf_tools_sub">Compress, merge, split</string>
+    <string name="home_open_doc">Open document</string>
+    <string name="home_open_doc_sub">Word, Sheets &amp; text files</string>
+    <string name="menu_pdf_tools">PDF tools</string>
+    <string name="menu_open_doc">Open document…</string>
+    <string name="office_error_open">Could not open this document.</string>
+    <string name="office_legacy_note">Text-only view: this is an old .doc, .ppt or .xls file, so formatting, tables and images are not shown.</string>
+    <string name="office_truncated">This file is very large, so only the first part is shown.</string>
+    <string name="office_search_hint">Find text in this document…</string>
+    <string name="office_search_none">No matches found</string>
+    <string name="office_text_bigger">Larger text</string>
+    <string name="office_text_smaller">Smaller text</string>
+    <string name="sheet_tab">Sheet %1$s</string>
+    <string name="sheet_rows">%1$s · Row %2$d · %3$s</string>
+    <string name="sheet_truncated">This sheet is very large, so only the first 5,000 rows are shown.</string>
+    <string name="goto_row_title">Go to row</string>
+    <plurals name="recent_blocks">
+        <item quantity="one">%d block</item>
+        <item quantity="other">%d blocks</item>
+    </plurals>
+    <plurals name="recent_rows">
+        <item quantity="one">%d row</item>
+        <item quantity="other">%d rows</item>
+    </plurals>
+
+    <string name="pdf_tools_title">PDF Tools</string>
+    <string name="pdf_tools_compress">Compress a PDF</string>
+    <string name="pdf_tools_merge">Merge PDFs</string>
+    <string name="pdf_tools_split">Split a PDF</string>
+    <string name="pdf_tools_preset">Quality preset</string>
+    <string name="preset_keep">Keep</string>
+    <string name="preset_balanced">Balanced</string>
+    <string name="preset_small">Small</string>
+    <string name="preset_keep_desc">200 dpi · best quality</string>
+    <string name="preset_balanced_desc">170 dpi · good balance</string>
+    <string name="preset_small_desc">130 dpi · smallest size</string>
+    <string name="pdf_compress_lossless_ok">Shrunk by %1$d%% without losing quality</string>
+    <string name="pdf_compress_lossless_fail">Lossless compression did not help</string>
+    <string name="pdf_compress_rebuild_note">This PDF cannot be shrunk without changing it. Rebuild it at a lower quality instead? Every page becomes an image, so text can no longer be selected.</string>
+    <string name="pdf_merge_hint">Pick two or more PDFs; they are merged in the order you pick them.</string>
+    <string name="pdf_split_from">From page</string>
+    <string name="pdf_split_to">To page</string>
+    <string name="pdf_split_range_error">Enter pages from 1 to %1$d, with the first page no later than the last.</string>
+
+    <string name="scan_f_magic">Magic</string>
+    <string name="scan_quality_title">PDF quality</string>
+    <string name="scan_save_images">Save images</string>
+    <string name="scan_images_saved">%1$d images saved to Downloads</string>
 </resources>

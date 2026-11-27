@@ -3,6 +3,33 @@
 All notable changes to LitePPTX. Versions follow [semantic versioning](https://semver.org/).
 Release notes for each version live in [`release-notes/`](release-notes/).
 
+## [1.6.0] - 2026-11-27
+
+### Added
+- **Universal document viewer** (`OfficeViewerActivity`): one viewer for `.docx`, `.xlsx`, `.txt`, `.csv`, `.rtf` and `.md`, opened from the file picker, the home tile, the overflow menu, or *Share* / *View* intents.
+  - Word: styles and headings, numbering and bullets, tables, right-to-left text, inline images decoded lazily from the file.
+  - Sheets: sheet tabs, A/B/C column headers, column widths, cell fills and bold text, merged cells, date/percent/number formatting, go-to-row.
+  - Plain text: `.txt` paragraphs, RFC 4180 `.csv`, `.rtf` (bold/italic/underline, Unicode escapes), Markdown headings, bullets and `**bold**`/`*italic*`/`` `code` ``.
+  - Text search across the document or sheet, text size 0.8–1.6×, share the original file, open externally, keep screen on.
+- **Legacy Office text fallback**: `.doc`, `.ppt` and `.xls` files are shown as plain text recovered from the OLE2 streams, with a clear "text only, formatting lost" note.
+- **PDF tools** (`PdfToolsActivity`, home tile and menu): **Compress** (lossless first — re-deflates Flate streams in classic xref-table PDFs and only keeps the result when it saves ≥5%; otherwise offers a rendered rebuild at Keep/Balanced/Small), **Merge** (in pick order) and **Split** (page range) — all offline, results shown with share/save/open.
+- **Magic scan filter**: a fifth filter with stronger levels, a saturation boost and an unsharp mask, for dull or faded pages.
+- **Scan PDF quality choice** (Original / Smart / Small, remembered) before building the scan PDF.
+- **Save scanned pages as images** to Downloads from the scanner start screen.
+- Recent files now remember documents and sheets too, with block/row counts.
+
+### Changed
+- The home screen gains a third tools row: **PDF Tools** and **Open document**.
+- APK size: still under ~250 KB (to verify from CI). Still zero third-party dependencies.
+
+### Fixed
+- Removed a stale unused import in `PdfViewerActivity`.
+
+### Known limitations
+- Legacy `.doc`/`.ppt`/`.xls` are text-only; charts/SmartArt are still not rendered.
+- Lossless PDF compression only works on classic xref-table PDFs; anything else falls back to a rendered rebuild, which turns pages into images.
+- XLSX is capped at 5,000 rows / 100 columns, DOCX at 2,000 blocks; the viewer says so when the cap is hit.
+
 ## [1.5.0] - 2026-11-27
 
 ### Added
@@ -106,6 +133,7 @@ Release notes for each version live in [`release-notes/`](release-notes/).
 ### Added
 - First release: a dependency-free PowerPoint (`.pptx`) viewer for Android 5.0+ with master/layout inheritance, shapes, tables, gradients, bullets, right-to-left text, pinch-to-zoom and a page counter.
 
+[1.6.0]: https://github.com/Evilenor/LitePPTXViewer/releases/tag/v1.6.0
 [1.5.0]: https://github.com/Evilenor/LitePPTXViewer/releases/tag/v1.5.0
 [1.4.1]: https://github.com/Evilenor/LitePPTXViewer/releases/tag/v1.4.1
 [1.4.0]: https://github.com/Evilenor/LitePPTXViewer/releases/tag/v1.4.0

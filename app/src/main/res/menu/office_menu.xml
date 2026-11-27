@@ -1,0 +1,27 @@
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/action_search"
+        android:title="@string/menu_search" />
+    <item
+        android:id="@+id/action_text_bigger"
+        android:title="@string/office_text_bigger" />
+    <item
+        android:id="@+id/action_text_smaller"
+        android:title="@string/office_text_smaller" />
+    <item
+        android:id="@+id/action_goto_row"
+        android:title="@string/goto_row_title" />
+    <item
+        android:id="@+id/action_share"
+        android:title="@string/menu_share" />
+    <item
+        android:id="@+id/action_open_ext"
+        android:title="@string/menu_open_external" />
+    <item
+        android:id="@+id/action_reset_zoom"
+        android:title="@string/menu_reset_zoom" />
+    <item
+        android:id="@+id/action_keep_awake"
+        android:checkable="true"
+        android:title="@string/menu_keep_awake" />
+</menu>

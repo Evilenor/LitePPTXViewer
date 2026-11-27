@@ -154,4 +154,56 @@
     <string name="goto_page_title">رفتن به صفحه</string>
     <string name="pdf_select_hint">برای جابجایی، چرخش یا حذف، روی یک عکس بزنید</string>
     <string name="pdf_selected_n">صفحه %1$d انتخاب شد</string>
+
+    <string name="office_viewer_title">نمایشگر سند</string>
+    <string name="open_doc">باز کردن سند</string>
+    <string name="home_pdf_tools">ابزارهای PDF</string>
+    <string name="home_pdf_tools_sub">فشرده‌سازی، ادغام، تقسیم</string>
+    <string name="home_open_doc">باز کردن سند</string>
+    <string name="home_open_doc_sub">ورد، شیت و فایل‌های متنی</string>
+    <string name="menu_pdf_tools">ابزارهای PDF</string>
+    <string name="menu_open_doc">باز کردن سند…</string>
+    <string name="office_error_open">باز کردن این سند ممکن نشد.</string>
+    <string name="office_legacy_note">فقط متن: این یک فایل قدیمی .doc یا .ppt یا .xls است، پس قالب‌بندی، جدول‌ها و تصاویر نمایش داده نمی‌شوند.</string>
+    <string name="office_truncated">این فایل خیلی بزرگ است؛ فقط بخش اول آن نمایش داده می‌شود.</string>
+    <string name="office_search_hint">جستجوی متن در این سند…</string>
+    <string name="office_search_none">موردی پیدا نشد</string>
+    <string name="office_text_bigger">متن بزرگ‌تر</string>
+    <string name="office_text_smaller">متن کوچک‌تر</string>
+    <string name="sheet_tab">برگه %1$s</string>
+    <string name="sheet_rows">%1$s · ردیف %2$d · %3$s</string>
+    <string name="sheet_truncated">این برگه خیلی بزرگ است؛ فقط 5000 ردیف اول نمایش داده می‌شود.</string>
+    <string name="goto_row_title">رفتن به ردیف</string>
+    <plurals name="recent_blocks">
+        <item quantity="one">%d بخش</item>
+        <item quantity="other">%d بخش</item>
+    </plurals>
+    <plurals name="recent_rows">
+        <item quantity="one">%d ردیف</item>
+        <item quantity="other">%d ردیف</item>
+    </plurals>
+
+    <string name="pdf_tools_title">ابزارهای PDF</string>
+    <string name="pdf_tools_compress">فشرده‌سازی PDF</string>
+    <string name="pdf_tools_merge">ادغام PDFها</string>
+    <string name="pdf_tools_split">تقسیم PDF</string>
+    <string name="pdf_tools_preset">کیفیت</string>
+    <string name="preset_keep">حفظ کیفیت</string>
+    <string name="preset_balanced">متعادل</string>
+    <string name="preset_small">کم‌حجم</string>
+    <string name="preset_keep_desc">200 dpi · بهترین کیفیت</string>
+    <string name="preset_balanced_desc">170 dpi · تعادل خوب</string>
+    <string name="preset_small_desc">130 dpi · کمترین حجم</string>
+    <string name="pdf_compress_lossless_ok">%1$d%% کم‌حجم شد، بدون افت کیفیت</string>
+    <string name="pdf_compress_lossless_fail">فشرده‌سازی بدون افت جواب نداد</string>
+    <string name="pdf_compress_rebuild_note">این PDF بدون تغییر کم‌حجم نمی‌شود. با کیفیت پایین‌تر بازسازی شود؟ هر صفحه به عکس تبدیل می‌شود و متن دیگر قابل انتخاب نیست.</string>
+    <string name="pdf_merge_hint">دو یا چند PDF انتخاب کنید؛ به همان ترتیبی که انتخاب می‌کنید ادغام می‌شوند.</string>
+    <string name="pdf_split_from">از صفحه</string>
+    <string name="pdf_split_to">تا صفحه</string>
+    <string name="pdf_split_range_error">صفحه‌ها را از ۱ تا %1$d وارد کنید؛ صفحه‌ی اول نباید بعد از صفحه‌ی آخر باشد.</string>
+
+    <string name="scan_f_magic">جادویی</string>
+    <string name="scan_quality_title">کیفیت PDF</string>
+    <string name="scan_save_images">ذخیره تصاویر</string>
+    <string name="scan_images_saved">%1$d تصویر در دانلودها ذخیره شد</string>
 </resources>

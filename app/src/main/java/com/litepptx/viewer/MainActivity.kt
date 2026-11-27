@@ -22,6 +22,7 @@ import android.widget.TextView
 import android.widget.Toast
 import com.litepptx.viewer.pdf.PdfActions
 import com.litepptx.viewer.pdf.PptxPdfExporter
+import com.litepptx.viewer.office.OfficeKind
 import com.litepptx.viewer.pptx.Deck
 import com.litepptx.viewer.pptx.PptxParser
 import com.litepptx.viewer.pptx.SlideRenderer
@@ -136,6 +137,10 @@ class MainActivity : Activity() {
         findViewById<View>(R.id.btnScan).setOnClickListener { openScanner(false) }
         findViewById<View>(R.id.btnIdCard).setOnClickListener { openScanner(true) }
         findViewById<View>(R.id.btnOpenPdf).setOnClickListener { pickPdf() }
+        findViewById<View>(R.id.btnPdfTools).setOnClickListener {
+            startActivity(Intent(this, PdfToolsActivity::class.java))
+        }
+        findViewById<View>(R.id.btnOpenDoc).setOnClickListener { pickFile() }
         tvSlideCounter.setOnClickListener { goToSlide() }
         btnNotes.setOnClickListener { showNotes() }
 
@@ -160,6 +165,10 @@ class MainActivity : Activity() {
         val savedSlide = savedInstanceState?.getInt("slide", 0) ?: 0
         val extUri = uriFrom(intent)
         val uri = extUri ?: saved?.let { Uri.parse(it) }
+        if (uri != null && extUri != null && routeExternal(uri, intent)) {
+            finish()
+            return
+        }
         if (uri != null) {
             openedFromHome = savedInstanceState?.getBoolean("fromHome", false) ?: false
             load(uri, fromRecent = false, resumeSlide = savedSlide, fromHome = openedFromHome)
@@ -176,7 +185,63 @@ class MainActivity : Activity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
-        uriFrom(intent)?.let { load(it, fromRecent = false, resumeSlide = 0, fromHome = false) }
+        uriFrom(intent)?.let { uri ->
+            if (!routeExternal(uri, intent)) {
+                load(uri, fromRecent = false, resumeSlide = 0, fromHome = false)
+            }
+        }
+    }
+
+    /**
+     * Hands OFFICE and PDF files to their own viewers. Returns true when the
+     * intent was routed away (the caller should finish MainActivity).
+     */
+    private fun routeExternal(uri: Uri, intent: Intent?): Boolean {
+        val kind = kindOf(uri, intent?.type)
+        return when (kind) {
+            OfficeKind.OFFICE -> {
+                startActivity(
+                    Intent(this, OfficeViewerActivity::class.java).apply {
+                        action = Intent.ACTION_VIEW
+                        setData(uri)
+                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    }
+                )
+                true
+            }
+            OfficeKind.PDF -> {
+                openPdfViewer(uri)
+                true
+            }
+            else -> false
+        }
+    }
+
+    private fun kindOf(uri: Uri, mime: String?): OfficeKind {
+        val byName = OfficeKind.fromName(UiHelper.displayName(this, uri) ?: uri.lastPathSegment)
+        if (byName != OfficeKind.UNSUPPORTED) return byName
+        return when (mime) {
+            "application/vnd.openxmlformats-officedocument.presentationml.presentation" -> OfficeKind.PPTX
+            "application/pdf" -> OfficeKind.PDF
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            "application/msword", "application/vnd.ms-excel", "application/vnd.ms-powerpoint",
+            "text/plain", "text/csv", "application/rtf", "text/markdown" -> OfficeKind.OFFICE
+            else -> OfficeKind.UNSUPPORTED
+        }
+    }
+
+    private fun openPdfViewer(uri: Uri) {
+        val view = Intent(this, PdfViewerActivity::class.java).apply {
+            action = Intent.ACTION_VIEW
+            setDataAndType(uri, "application/pdf")
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        try {
+            startActivity(view)
+        } catch (_: Exception) {
+            Toast.makeText(this, R.string.pdf_error_open, Toast.LENGTH_SHORT).show()
+        }
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
@@ -257,6 +322,15 @@ class MainActivity : Activity() {
                 Intent.EXTRA_MIME_TYPES,
                 arrayOf(
                     "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+                    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    "application/msword",
+                    "application/vnd.ms-excel",
+                    "application/vnd.ms-powerpoint",
+                    "text/plain",
+                    "text/csv",
+                    "application/rtf",
+                    "text/markdown",
                     "application/octet-stream"
                 )
             )
@@ -289,23 +363,31 @@ class MainActivity : Activity() {
                     contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
                 } catch (_: Exception) {
                 }
-                val saved = RecentStore.find(this, uri.toString())?.last ?: 0
-                load(uri, fromRecent = false, resumeSlide = saved, fromHome = true)
+                when (kindOf(uri, null)) {
+                    OfficeKind.PPTX -> {
+                        val saved = RecentStore.find(this, uri.toString())?.last ?: 0
+                        load(uri, fromRecent = false, resumeSlide = saved, fromHome = true)
+                    }
+                    OfficeKind.PDF -> openPdfViewer(uri)
+                    OfficeKind.OFFICE -> {
+                        try {
+                            startActivity(
+                                Intent(this, OfficeViewerActivity::class.java).apply {
+                                    action = Intent.ACTION_VIEW
+                                    setData(uri)
+                                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                }
+                            )
+                        } catch (_: Exception) {
+                            Toast.makeText(this, R.string.error_loading, Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                    OfficeKind.UNSUPPORTED -> Toast.makeText(this, R.string.error_loading, Toast.LENGTH_SHORT).show()
+                }
             }
         }
         if (requestCode == REQ_OPEN_PDF && resultCode == RESULT_OK) {
-            data?.data?.let { uri ->
-                val view = Intent(this, PdfViewerActivity::class.java).apply {
-                    action = Intent.ACTION_VIEW
-                    setDataAndType(uri, "application/pdf")
-                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                }
-                try {
-                    startActivity(view)
-                } catch (_: Exception) {
-                    Toast.makeText(this, R.string.pdf_error_open, Toast.LENGTH_SHORT).show()
-                }
-            }
+            data?.data?.let { uri -> openPdfViewer(uri) }
         }
         if (requestCode == REQ_SAVE && resultCode == RESULT_OK) {
             val dest = data?.data
@@ -347,6 +429,11 @@ class MainActivity : Activity() {
         popup.setOnMenuItemClickListener { item ->
             when (item.itemId) {
                 R.id.action_open -> { pickFile(); true }
+                R.id.action_open_doc -> { pickFile(); true }
+                R.id.action_pdf_tools -> {
+                    startActivity(Intent(this, PdfToolsActivity::class.java))
+                    true
+                }
                 R.id.action_goto -> { goToSlide(); true }
                 R.id.action_search -> { searchSlides(); true }
                 R.id.action_notes -> { showNotes(); true }
@@ -773,14 +860,33 @@ class MainActivity : Activity() {
             val row = layoutInflater.inflate(R.layout.item_recent, recentList, false)
             row.findViewById<TextView>(R.id.tvRecentName).text = e.name
             val t = relativeTime(e.time)
-            row.findViewById<TextView>(R.id.tvRecentMeta).text = if (e.last > 0 && e.slides > 0) {
+            val countRes = when (e.kind) {
+                "doc" -> R.plurals.recent_blocks
+                "sheet" -> R.plurals.recent_rows
+                else -> R.plurals.recent_slides
+            }
+            row.findViewById<TextView>(R.id.tvRecentMeta).text = if (e.last > 0 && e.slides > 0 && e.kind == "pptx") {
                 getString(R.string.recent_resume, e.last + 1, e.slides, t)
             } else {
-                val countStr = resources.getQuantityString(R.plurals.recent_slides, e.slides, e.slides)
+                val countStr = resources.getQuantityString(countRes, e.slides, e.slides)
                 getString(R.string.recent_meta, countStr, t)
             }
             row.setOnClickListener {
-                load(Uri.parse(e.uri), fromRecent = true, resumeSlide = e.last, fromHome = true)
+                if (e.kind == "pptx") {
+                    load(Uri.parse(e.uri), fromRecent = true, resumeSlide = e.last, fromHome = true)
+                } else {
+                    try {
+                        startActivity(
+                            Intent(this, OfficeViewerActivity::class.java).apply {
+                                action = Intent.ACTION_VIEW
+                                setData(Uri.parse(e.uri))
+                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                            }
+                        )
+                    } catch (_: Exception) {
+                        Toast.makeText(this, R.string.error_loading, Toast.LENGTH_SHORT).show()
+                    }
+                }
             }
             row.findViewById<View>(R.id.btnRecentRemove).setOnClickListener {
                 RecentStore.remove(this, e.uri)

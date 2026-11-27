@@ -111,7 +111,8 @@ class ScanActivity : Activity() {
         btnDone = findViewById(R.id.btnDone)
         chips = listOf(
             findViewById(R.id.fOriginal), findViewById(R.id.fClean),
-            findViewById(R.id.fBw), findViewById(R.id.fGray)
+            findViewById(R.id.fBw), findViewById(R.id.fGray),
+            findViewById(R.id.fMagic)
         )
 
         idCardMode = savedInstanceState?.getBoolean("idCard")
@@ -120,7 +121,7 @@ class ScanActivity : Activity() {
         modeId.setOnClickListener { setScanMode(true) }
 
         val prefs = getSharedPreferences("scan", MODE_PRIVATE)
-        filter = prefs.getInt("filter", ScanFilters.ENHANCED).coerceIn(0, 3)
+        filter = prefs.getInt("filter", ScanFilters.ENHANCED).coerceIn(0, 4)
         for ((i, c) in chips.withIndex()) c.setOnClickListener {
             filter = i
             prefs.edit().putInt("filter", i).apply()
@@ -138,6 +139,7 @@ class ScanActivity : Activity() {
                 showStart()
             }
         }
+        findViewById<View>(R.id.btnSaveImages).setOnClickListener { saveImages() }
         findViewById<View>(R.id.btnRetake).setOnClickListener { retake() }
         findViewById<View>(R.id.btnFull).setOnClickListener {
             quad = floatArrayOf(0f, 0f, 1f, 0f, 1f, 1f, 0f, 1f)
@@ -264,6 +266,7 @@ class ScanActivity : Activity() {
             btnFinish.text = getString(R.string.pdf_create_n, pages.size)
         }
         btnUndo.visibility = if (pages.isEmpty()) View.GONE else View.VISIBLE
+        findViewById<View>(R.id.btnSaveImages).visibility = if (pages.isEmpty()) View.GONE else View.VISIBLE
     }
 
     private fun showCrop() {
@@ -535,6 +538,7 @@ class ScanActivity : Activity() {
             try {
                 f = ScanImage.warp(src, q, ScanImage.FILTER_LONG, rot)
                 s = ScanFilters.copyWith(f, mode)
+                if (mode == ScanFilters.MAGIC) ScanFilters.sharpenInPlace(s)
             } catch (t: Throwable) {
                 android.util.Log.w("LitePPTX", "scan preview failed", t)
             }
@@ -562,6 +566,7 @@ class ScanActivity : Activity() {
             var s: Bitmap? = null
             try {
                 s = ScanFilters.copyWith(f, mode)
+                if (mode == ScanFilters.MAGIC) ScanFilters.sharpenInPlace(s)
             } catch (t: Throwable) {
                 android.util.Log.w("LitePPTX", "scan filter failed", t)
             }
@@ -592,6 +597,7 @@ class ScanActivity : Activity() {
                     if (src == null) break
                     page = ScanImage.ensureMutable(ScanImage.warp(src, q, long, rot))
                     ScanFilters.applyInPlace(page, mode)
+                    if (mode == ScanFilters.MAGIC) ScanFilters.sharpenInPlace(page)
                     ScanImage.saveJpeg(page, out, if (mode == ScanFilters.BW) 80 else 86)
                     ok = true
                     break
@@ -633,6 +639,24 @@ class ScanActivity : Activity() {
 
     private fun buildPdf() {
         if (building || pages.isEmpty()) return
+        val prefs = getSharedPreferences("scan", MODE_PRIVATE)
+        val stored = prefs.getInt("scan_pdf_quality", 0)
+        val names = arrayOf(getString(R.string.q_original), getString(R.string.q_smart), getString(R.string.q_small))
+        val values = intArrayOf(0, 2, 3)
+        val current = values.indexOf(stored).coerceAtLeast(0)
+        AlertDialog.Builder(this)
+            .setTitle(R.string.scan_quality_title)
+            .setSingleChoiceItems(names, current) { dlg, which ->
+                prefs.edit().putInt("scan_pdf_quality", values[which]).apply()
+                dlg.dismiss()
+                doBuild(values[which])
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
+    }
+
+    private fun doBuild(quality: Int) {
+        if (building || pages.isEmpty()) return
         building = true
         val ctx = applicationContext
         val prefix = if (idCardMode && pages.size >= 2) "ID_" else "Scan_"
@@ -653,9 +677,8 @@ class ScanActivity : Activity() {
                     pages.map { PdfBuilder.Item(ScanProvider.uriFor(it.name)) }
                 }
                 val n = list.size
-                // The pages are already cleaned JPEGs, so they go in untouched ("Original").
                 res = PdfBuilder.build(
-                    ctx, list, PdfBuilder.Options(PdfBuilder.PAGE_AUTO, 0, 0), f, name.removeSuffix(".pdf"),
+                    ctx, list, PdfBuilder.Options(PdfBuilder.PAGE_AUTO, 0, quality), f, name.removeSuffix(".pdf"),
                     { i -> ui.post { if (!destroyed) tvBusy.text = getString(R.string.pdf_working, i + 1, n) } },
                     { destroyed }
                 )
@@ -679,6 +702,31 @@ class ScanActivity : Activity() {
                     showStart()
                     resultFile = f
                     PdfActions.showResult(this, f, r.pages, r.bytes) { savePdf(it) }
+                }
+            }
+        }
+    }
+
+    /** Saves each scanned page as a JPEG in Downloads (Android 10+). Pages stay in the scanner. */
+    private fun saveImages() {
+        if (pages.isEmpty() || Build.VERSION.SDK_INT < 29) {
+            toast(R.string.error_pdf)
+            return
+        }
+        val ctx = applicationContext
+        val files = ArrayList(pages)
+        bg {
+            var saved = 0
+            for (f in files) {
+                try {
+                    if (PdfActions.saveFileToDownloads(ctx, f, "image/jpeg")) saved++
+                } catch (_: Throwable) {
+                }
+            }
+            ui.post {
+                if (!destroyed) {
+                    if (saved > 0) Toast.makeText(this, getString(R.string.scan_images_saved, saved), Toast.LENGTH_LONG).show()
+                    else toast(R.string.error_pdf)
                 }
             }
         }
