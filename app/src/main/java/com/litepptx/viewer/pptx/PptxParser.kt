@@ -58,12 +58,11 @@ class PptxParser(private val zip: ZipFile, private val file: File? = null) {
                 .toList()
         }
 
-        val slides = ArrayList<Slide>(paths.size)
-        for ((i, p) in paths.withIndex()) {
-            parseSlide(i + 1, p)?.let { slides.add(it) }
-        }
-        domCache.clear()
-        return Deck(cx, cy, slides, zip, file)
+        // Slides are NOT parsed here: each one is parsed when it is first shown,
+        // searched or exported (see Deck). Opening a big deck now only reads
+        // presentation.xml and the slide list. Masters, layouts and the
+        // presentation DOM stay cached in this parser for the Deck's lifetime.
+        return Deck(cx, cy, { i -> parseSlide(i + 1, paths[i]) }, paths.size, zip, file)
     }
 
     // ------------------------------------------------------------------ package helpers
@@ -71,7 +70,7 @@ class PptxParser(private val zip: ZipFile, private val file: File? = null) {
     private fun dom(path: String, cache: Boolean): Node? {
         domCache[path]?.let { return it }
         val e = zip.getEntry(path) ?: return null
-        val node = zip.getInputStream(e).use { Dom.parse(it.readBytes()) } ?: return null
+        val node = zip.getInputStream(e).use { Dom.parse(it) } ?: return null
         if (cache) domCache[path] = node
         return node
     }

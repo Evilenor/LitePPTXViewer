@@ -3,6 +3,22 @@
 All notable changes to LitePPTX. Versions follow [semantic versioning](https://semver.org/).
 Release notes for each version live in [`release-notes/`](release-notes/).
 
+## [1.8.0] - 2026-11-28
+
+The speed release: same features, same rendering — just faster to open and lighter on memory. No new permissions, no new libraries, still zero dependencies.
+
+### Changed
+- **Lazy slide parsing**: opening a presentation now reads only `presentation.xml` and the slide list. Each slide is parsed when it is first shown, searched or exported, and the last few stay cached — so a 50-slide deck opens near-instantly instead of parsing every slide up front.
+- **Streaming XML parsing**: OOXML parts (slides, `document.xml`, sheets) are now parsed straight from the zip entry stream with `XmlPullParser` instead of being read fully into a `ByteArray` first.
+- **Bitmap pool + 16-bit colour**: rendered slides reuse bitmaps from a small pool instead of allocating a fresh frame on every scroll step. Flat slides (no photos, gradients or translucent colours) render in RGB_565 — half the memory of ARGB_8888, with identical pixels. Photos and gradients still get full colour.
+- **Search cache**: global search extracts each recent file's text once and reuses it for later queries, keyed by file size + last-modified so an edited file is re-parsed. A cache hit skips the file copy and the re-parse entirely.
+- **Cold start**: the update check now waits ~1.2 s until the first screen is up instead of running during startup, and the update cleanup and stale cache-file sweep moved off the start path. Startup timing is logged to logcat (`adb logcat -s LitePPTX`: `onCreate total`, `first deck shown`, `recents rendered`).
+- **In-deck search** (⋯ → Search slides) now runs on a background thread with the progress bar, since slides parse on demand.
+
+### Known limitations
+- Time-to-first-slide and peak memory are measured on a real device via the new logcat lines; no measured numbers yet.
+- Global search hits on PPTX files still jump one slide too far and label one slide too high (pre-existing v1.7.0 off-by-one, to be fixed separately).
+
 ## [1.7.0] - 2026-11-27
 
 ### Added

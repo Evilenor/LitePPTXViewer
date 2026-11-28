@@ -21,7 +21,7 @@ class OoxmlPackage(private val zip: ZipFile, private val file: File?) {
     fun dom(path: String, cache: Boolean): Node? {
         if (cache) domCache[path]?.let { return it }
         val e = zip.getEntry(path) ?: return null
-        val node = zip.getInputStream(e).use { Dom.parse(it.readBytes()) } ?: return null
+        val node = zip.getInputStream(e).use { Dom.parse(it) } ?: return null
         if (cache) domCache[path] = node
         return node
     }

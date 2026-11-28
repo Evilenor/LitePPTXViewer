@@ -2,7 +2,7 @@ package com.litepptx.viewer.pptx
 
 import android.util.Xml
 import org.xmlpull.v1.XmlPullParser
-import java.io.ByteArrayInputStream
+import java.io.InputStream
 
 /** Tiny immutable-ish XML tree. Names are stored without namespace prefix ("a:t" -> "t"). */
 class Node(val name: String, val attrs: Map<String, String>) {
@@ -38,13 +38,18 @@ class Node(val name: String, val attrs: Map<String, String>) {
 object Dom {
     private const val REL_NS = "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
 
-    fun parse(bytes: ByteArray): Node? = try {
-        parseStream(ByteArrayInputStream(bytes))
+    /**
+     * Parses XML straight from the stream: the caller never has to hold the
+     * whole part as a ByteArray first. Used for slideN.xml, document.xml and
+     * every other OOXML part (they all come from a ZipFile entry stream).
+     */
+    fun parse(input: InputStream): Node? = try {
+        parseStream(input)
     } catch (e: Exception) {
         null
     }
 
-    private fun parseStream(input: ByteArrayInputStream): Node? {
+    private fun parseStream(input: InputStream): Node? {
         val p = Xml.newPullParser()
         try { p.setFeature(XmlPullParser.FEATURE_PROCESS_NAMESPACES, true) } catch (_: Exception) { }
         p.setInput(input, null)
