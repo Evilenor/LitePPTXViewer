@@ -86,7 +86,10 @@ object GlobalSearch {
     private fun fingerprint(ctx: Context, uri: Uri): String? {
         val size = try {
             ctx.contentResolver.query(uri, arrayOf(OpenableColumns.SIZE), null, null, null)?.use { c ->
-                if (!c.moveToFirst()) -1L else c.getLong(c.getColumnIndex(OpenableColumns.SIZE))
+                if (!c.moveToFirst()) -1L else {
+                    val i = c.getColumnIndex(OpenableColumns.SIZE)
+                    if (i < 0) -1L else c.getLong(i)
+                }
             } ?: -1L
         } catch (_: Exception) {
             -1L
@@ -95,8 +98,10 @@ object GlobalSearch {
             ctx.contentResolver.query(
                 uri, arrayOf(DocumentsContract.Document.COLUMN_LAST_MODIFIED), null, null, null
             )?.use { c ->
-                if (!c.moveToFirst()) 0L
-                else c.getLong(c.getColumnIndex(DocumentsContract.Document.COLUMN_LAST_MODIFIED))
+                if (!c.moveToFirst()) 0L else {
+                    val i = c.getColumnIndex(DocumentsContract.Document.COLUMN_LAST_MODIFIED)
+                    if (i < 0) 0L else c.getLong(i)
+                }
             } ?: 0L
         } catch (_: Exception) {
             0L
