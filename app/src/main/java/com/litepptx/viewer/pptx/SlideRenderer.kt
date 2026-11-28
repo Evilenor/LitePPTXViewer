@@ -31,10 +31,23 @@ class SlideRenderer(private val deck: Deck) {
         override fun sizeOf(key: String, value: Bitmap): Int = value.byteCount
     }
 
-    fun render(slide: Slide, widthPx: Int): Bitmap {
+    /**
+     * Renders one slide. [reusable] is a bitmap the caller got back from the
+     * pool: same size and config, not shown anywhere any more. Drawing into it
+     * instead of allocating saves a full-frame allocation on every scroll step.
+     */
+    fun render(slide: Slide, widthPx: Int, reusable: Bitmap? = null): Bitmap {
         val ratio = deck.hEmu.toFloat() / deck.wEmu.toFloat()
         val heightPx = (widthPx * ratio).toInt().coerceAtLeast(1)
-        val bmp = Bitmap.createBitmap(widthPx, heightPx, Bitmap.Config.ARGB_8888)
+        val config = configFor(slide)
+        val bmp = if (reusable != null && reusable.isMutable && reusable.width == widthPx &&
+            reusable.height == heightPx && reusable.config == config
+        ) {
+            reusable.eraseColor(Color.TRANSPARENT) // exactly like a fresh bitmap
+            reusable
+        } else {
+            Bitmap.createBitmap(widthPx, heightPx, config)
+        }
         val canvas = Canvas(bmp)
         val k = widthPx / deck.wEmu.toFloat()        // EMU -> px
         val ptPx = k * 12700f                         // pt -> px
@@ -70,6 +83,33 @@ class SlideRenderer(private val deck: Deck) {
             canvas.restore()
         }
         return bmp
+    }
+
+    /**
+     * Half the memory for the common slide: flat colours and text render the
+     * same in 16-bit, because every pixel ends up opaque (the background covers
+     * the whole frame first). Photos and gradients keep full colour, where
+     * RGB_565 would band, and any translucent colour does too, since blending
+     * it over the black a fresh 565 bitmap starts as would change the result.
+     */
+    fun configFor(slide: Slide): Bitmap.Config {
+        if (slide.bgImage != null) return Bitmap.Config.ARGB_8888
+        slide.bg?.let { if (it.grad != null || Color.alpha(it.color) != 255) return Bitmap.Config.ARGB_8888 }
+        for (el in slide.elements) {
+            when (el) {
+                is Pic -> return Bitmap.Config.ARGB_8888
+                is Shape -> {
+                    el.fill?.let { if (it.grad != null || Color.alpha(it.color) != 255) return Bitmap.Config.ARGB_8888 }
+                    el.stroke?.let { if (Color.alpha(it) != 255) return Bitmap.Config.ARGB_8888 }
+                    for (p in el.paras) for (r in p.runs) if (Color.alpha(r.color) != 255) return Bitmap.Config.ARGB_8888
+                }
+                is Tbl -> for (row in el.rows) for (cell in row.cells) {
+                    cell.fill?.let { if (Color.alpha(it) != 255) return Bitmap.Config.ARGB_8888 }
+                    for (p in cell.paras) for (r in p.runs) if (Color.alpha(r.color) != 255) return Bitmap.Config.ARGB_8888
+                }
+            }
+        }
+        return Bitmap.Config.RGB_565
     }
 
     // ------------------------------------------------------------------ fills

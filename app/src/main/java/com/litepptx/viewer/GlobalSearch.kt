@@ -3,6 +3,8 @@ package com.litepptx.viewer
 import android.content.Context
 import android.graphics.Color
 import android.net.Uri
+import android.provider.DocumentsContract
+import android.provider.OpenableColumns
 import com.litepptx.viewer.office.DocBlock
 import com.litepptx.viewer.office.DocDocument
 import com.litepptx.viewer.office.DocxParser
@@ -56,65 +58,109 @@ object GlobalSearch {
 
     private fun searchFile(ctx: Context, e: RecentStore.Entry, q: String): List<GlobalHit> {
         val uri = Uri.parse(e.uri)
+        // A cached copy of the file's text makes repeat searches free; the
+        // fingerprint (size + last-modified) invalidates it when the file changes.
+        val fp = fingerprint(ctx, uri)
+        if (fp != null) {
+            SearchCache.get(e.uri, fp)?.let { return matchUnits(ctx, e, it, q) }
+        }
         val ext = e.name.substringAfterLast('.', "").lowercase()
         val f = File(ctx.cacheDir, "gsearch-${System.nanoTime()}.$ext")
         try {
             ctx.contentResolver.openInputStream(uri)?.use { src ->
                 f.outputStream().use { dst -> src.copyTo(dst, 64 * 1024) }
             } ?: return emptyList()
-            return when (e.kind) {
-                "pptx" -> searchPptx(ctx, e, f, q)
-                "sheet" -> searchSheet(ctx, e, f, ext, q)
-                else -> searchDoc(ctx, e, f, ext, q)
+            val units = when (e.kind) {
+                "pptx" -> pptxUnits(f)
+                "sheet" -> sheetUnits(f, ext)
+                else -> docUnits(f, ext)
             }
+            if (fp != null) SearchCache.put(e.uri, fp, units)
+            return matchUnits(ctx, e, units, q)
         } finally {
             f.delete()
         }
     }
 
-    private fun searchPptx(ctx: Context, e: RecentStore.Entry, f: File, q: String): List<GlobalHit> {
+    /** "size:lastModified", or null when the file cannot be fingerprinted (then it is never cached). */
+    private fun fingerprint(ctx: Context, uri: Uri): String? {
+        val size = try {
+            ctx.contentResolver.query(uri, arrayOf(OpenableColumns.SIZE), null, null, null)?.use { c ->
+                if (!c.moveToFirst()) -1L else {
+                    val i = c.getColumnIndex(OpenableColumns.SIZE)
+                    if (i < 0) -1L else c.getLong(i)
+                }
+            } ?: -1L
+        } catch (_: Exception) {
+            -1L
+        }
+        val mod = try {
+            ctx.contentResolver.query(
+                uri, arrayOf(DocumentsContract.Document.COLUMN_LAST_MODIFIED), null, null, null
+            )?.use { c ->
+                if (!c.moveToFirst()) 0L else {
+                    val i = c.getColumnIndex(DocumentsContract.Document.COLUMN_LAST_MODIFIED)
+                    if (i < 0) 0L else c.getLong(i)
+                }
+            } ?: 0L
+        } catch (_: Exception) {
+            0L
+        }
+        // Size alone is a weak fingerprint (an edit can keep the size), so a
+        // file without a last-modified stamp is never cached.
+        return if (mod <= 0) null else "$size:$mod"
+    }
+
+    /** Matches the cached/extracted units against the query, building hits exactly as before. */
+    private fun matchUnits(ctx: Context, e: RecentStore.Entry, units: List<SearchCache.Unit>, q: String): List<GlobalHit> {
         val hits = ArrayList<GlobalHit>()
+        for (u in units) {
+            val at = u.text.lowercase().indexOf(q)
+            if (at < 0) continue
+            val hit = when (e.kind) {
+                "pptx" -> GlobalHit(
+                    e.uri, e.name, "pptx", u.pos,
+                    ctx.getString(R.string.global_hit_slide, u.pos + 1),
+                    snippet(u.text, at, q.length)
+                )
+                "sheet" -> GlobalHit(
+                    e.uri, e.name, "sheet", u.pos,
+                    ctx.getString(R.string.global_hit_row, u.pos),
+                    snippet(u.text, at, q.length), u.sheet
+                )
+                else -> GlobalHit(
+                    e.uri, e.name, "doc", u.pos,
+                    ctx.getString(R.string.global_hit_block, u.pos + 1),
+                    snippet(u.text, at, q.length)
+                )
+            }
+            hits += hit
+            if (hits.size >= MAX_PER_FILE) break
+        }
+        return hits
+    }
+
+    private fun pptxUnits(f: File): List<SearchCache.Unit> {
         val deck = PptxParser(ZipFile(f), f).parse()
         try {
-            for (slide in deck.slides) {
-                val text = slide.textContent()
-                val at = text.lowercase().indexOf(q)
-                if (at < 0) continue
-                hits += GlobalHit(
-                    e.uri, e.name, "pptx", slide.index,
-                    ctx.getString(R.string.global_hit_slide, slide.index + 1),
-                    snippet(text, at, q.length)
-                )
-                if (hits.size >= MAX_PER_FILE) break
-            }
+            val units = ArrayList<SearchCache.Unit>()
+            for (slide in deck.slides) units += SearchCache.Unit(slide.index, 0, slide.textContent())
+            return units
         } finally {
             deck.close()
         }
-        return hits
     }
 
-    private fun searchDoc(ctx: Context, e: RecentStore.Entry, f: File, ext: String, q: String): List<GlobalHit> {
+    private fun docUnits(f: File, ext: String): List<SearchCache.Unit> {
         val doc = parseDoc(f, ext)
-        val hits = ArrayList<GlobalHit>()
         try {
-            for ((i, b) in doc.blocks.withIndex()) {
-                val text = blockText(b)
-                val at = text.lowercase().indexOf(q)
-                if (at < 0) continue
-                hits += GlobalHit(
-                    e.uri, e.name, "doc", i,
-                    ctx.getString(R.string.global_hit_block, i + 1),
-                    snippet(text, at, q.length)
-                )
-                if (hits.size >= MAX_PER_FILE) break
-            }
+            return doc.blocks.mapIndexed { i, b -> SearchCache.Unit(i, 0, blockText(b)) }
         } finally {
             doc.close()
         }
-        return hits
     }
 
-    private fun searchSheet(ctx: Context, e: RecentStore.Entry, f: File, ext: String, q: String): List<GlobalHit> {
+    private fun sheetUnits(f: File, ext: String): List<SearchCache.Unit> {
         val wb: Workbook = when (ext) {
             "xlsx" -> {
                 val pkg = OoxmlPackage(ZipFile(f), f)
@@ -127,27 +173,19 @@ object GlobalSearch {
             }
             else -> TextFormats.parseCsv(readText(f))
         }
-        val hits = ArrayList<GlobalHit>()
         try {
+            val units = ArrayList<SearchCache.Unit>()
             for ((si, sheet) in wb.sheets.withIndex()) {
                 for (row in sheet.rows) {
                     val text = row.cells.entries.sortedBy { it.key }.joinToString(" ") { it.value.text }
-                    val at = text.lowercase().indexOf(q)
-                    if (at < 0) continue
                     // List position 0 is the A/B/C header, so a data row sits at index + 1.
-                    val pos = row.index + 1
-                    hits += GlobalHit(
-                        e.uri, e.name, "sheet", pos,
-                        ctx.getString(R.string.global_hit_row, row.index + 1),
-                        snippet(text, at, q.length), si
-                    )
-                    if (hits.size >= MAX_PER_FILE) return hits
+                    units += SearchCache.Unit(row.index + 1, si, text)
                 }
             }
+            return units
         } finally {
             wb.close()
         }
-        return hits
     }
 
     /** Same format dispatch as the office viewer, minus the UI. */

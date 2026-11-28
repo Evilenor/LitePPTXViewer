@@ -1,5 +1,6 @@
 package com.litepptx.viewer.pptx
 
+import android.graphics.Color
 import java.io.File
 import java.util.zip.ZipFile
 
@@ -110,16 +111,59 @@ class Slide(
     }
 }
 
+/**
+ * A presentation whose slides parse on first access. Opening a 50-slide deck
+ * only reads presentation.xml up front; each slide is parsed when it is shown,
+ * searched or exported, and the last few stay cached. [loader] is the parser
+ * that owns the master/layout caches, so it must stay alive with this Deck.
+ */
 class Deck(
     val wEmu: Long,
     val hEmu: Long,
-    val slides: List<Slide>,
+    private val loader: (Int) -> Slide?,
+    private val slideCount: Int,
     private val zip: ZipFile,
     private val file: File?
 ) {
+    /**
+     * Lazy slide list: [AbstractList] gives index access, iteration, size and
+     * getOrNull for free, all through [get]. Every access is serialized on
+     * this Deck, because the render threads, the search and the PDF export can
+     * all ask for slides at once. A slide that cannot be parsed (or is asked
+     * for after the zip closed) comes back as a blank slide, never a crash.
+     */
+    val slides: List<Slide> = LazySlides()
+
+    private inner class LazySlides : AbstractList<Slide>() {
+        private val cache = object : LinkedHashMap<Int, Slide>(8, 0.75f, true) {
+            override fun removeEldestEntry(e: MutableMap.MutableEntry<Int, Slide>): Boolean = size > 8
+        }
+
+        override val size: Int get() = slideCount
+
+        override fun get(index: Int): Slide {
+            if (index !in 0 until slideCount) throw IndexOutOfBoundsException("slide $index of $slideCount")
+            synchronized(this@Deck) {
+                cache[index]?.let { return it }
+                val s = try {
+                    loader(index)
+                } catch (_: Throwable) {
+                    null
+                } ?: Slide(index + 1, Fill(Color.WHITE), null, emptyList())
+                cache[index] = s
+                return s
+            }
+        }
+
+        fun clear() {
+            cache.clear()
+        }
+    }
+
     fun entry(path: String) = zip.getEntry(path)?.let { zip.getInputStream(it) }
 
     fun close() {
+        synchronized(this) { (slides as LazySlides).clear() }
         try { zip.close() } catch (_: Throwable) { }
         try { file?.delete() } catch (_: Throwable) { }
     }

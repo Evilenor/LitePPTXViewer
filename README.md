@@ -38,7 +38,7 @@ Opening a `.pptx` someone sent you in a chat shouldn't need a 300&nbsp;MB office
 | | |
 |---|---|
 | **Tiny** | The release APK is still under ~250&nbsp;KB (to verify from CI). Only Android platform APIs are used. There is not a single third-party library. |
-| **Fast** | Slides are rendered lazily, only when they scroll into view, and cached. Opening a deck takes about a second on an emulator. |
+| **Fast** | Slides are parsed only when they scroll into view, rendered lazily and cached, with a bitmap pool and 16-bit colour for flat slides — so a big deck opens near-instantly and uses far less memory. Global search caches each file's text once; the home screen appears without waiting for the update check or file cleanup. |
 | **Private** | No analytics, no ads, no permissions to read your files. Your documents never leave the phone. |
 | **Self-updating** | The app notices new releases by itself and keeps a dot on the **⋯** button until you update. Download once: it is remembered, verified, and offered for install even after you close the app. |
 | **Bilingual** | English and Persian UI, with proper right-to-left text rendering in slides. |

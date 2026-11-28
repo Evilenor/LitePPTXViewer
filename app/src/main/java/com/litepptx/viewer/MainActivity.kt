@@ -10,11 +10,13 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import android.provider.OpenableColumns
 import android.text.Editable
 import android.text.InputType
 import android.text.TextWatcher
 import android.text.format.Formatter
+import android.util.Log
 import android.view.View
 import android.widget.AbsListView
 import android.widget.Button
@@ -80,6 +82,8 @@ class MainActivity : Activity() {
     private var night = false
     private var searchGen = 0
     private var recentSort = 0 // 0 recency, 1 name, 2 type
+    private var firstShownAt = 0L // elapsedRealtime when the first deck was shown
+    private var recentsLogged = false // one log line per launch, not per refresh
     private lateinit var dimOverlay: View
 
     /** A slow double-beat on the heart, only while the start screen is visible. */
@@ -115,7 +119,15 @@ class MainActivity : Activity() {
         }.start()
     }
 
+    /** The silent update check, deferred until the first screen is up (see onResume). */
+    private val deferredUpdateCheck = Runnable {
+        if (!isFinishing) checkUpdate(false)
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
+        // Startup timing (logcat, tag LitePPTX): measure on a real device with
+        // `adb logcat -s LitePPTX` and compare against v1.7.0.
+        val t0 = SystemClock.elapsedRealtime()
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         UiHelper.applyInsets(findViewById(R.id.root))
@@ -178,8 +190,14 @@ class MainActivity : Activity() {
             }
         })
 
-        // Remove files left behind by an earlier, killed process.
-        cacheDir.listFiles()?.forEach { if (it.name.startsWith("doc-")) it.delete() }
+        // Housekeeping off the start path: the app is usable while it runs.
+        io.execute {
+            // Remove files left behind by an earlier, killed process.
+            try {
+                cacheDir.listFiles()?.forEach { if (it.name.startsWith("doc-")) it.delete() }
+            } catch (_: Throwable) { }
+            try { Updater.cleanup(this) } catch (_: Throwable) { }
+        }
 
         val saved = savedInstanceState?.getString("uri")
         val savedSlide = savedInstanceState?.getInt("slide", 0) ?: 0
@@ -198,8 +216,8 @@ class MainActivity : Activity() {
 
         // Show a known pending update straight away (and a finished download), then let onResume
         // look for a newer one. Nothing is forgotten when the app is closed.
-        Updater.cleanup(this)
         Updater.loadPending(this)?.let { showUpdate(it) }
+        Log.d("LitePPTX", "onCreate total ${SystemClock.elapsedRealtime() - t0}ms")
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -284,13 +302,18 @@ class MainActivity : Activity() {
             pendingInstall = false
             install(ready)
         } else {
-            checkUpdate(false)
+            // The silent check used to run here and hold up the first draw; it
+            // now waits until the first screen is up (the network call itself
+            // already ran on the net executor).
+            ui.removeCallbacks(deferredUpdateCheck)
+            ui.postDelayed(deferredUpdateCheck, 1200)
         }
     }
 
     override fun onPause() {
         currentUri?.let { if (slideCount > 0) RecentStore.setLast(this, it.toString(), curSlide) }
         ui.removeCallbacks(heartbeat)
+        ui.removeCallbacks(deferredUpdateCheck) // never check while backgrounded
         ivHeart.animate().cancel()
         ivHeart.scaleX = 1f
         ivHeart.scaleY = 1f
@@ -564,24 +587,39 @@ class MainActivity : Activity() {
             .setPositiveButton(R.string.goto_go) { _, _ ->
                 val q = input.text.toString().trim()
                 if (q.isEmpty()) return@setPositiveButton
-                val hits = ArrayList<Pair<Int, String>>()
-                for ((i, s) in d.slides.withIndex()) {
-                    val txt = s.textContent()
-                    val idx = txt.indexOf(q, ignoreCase = true)
-                    if (idx >= 0) {
-                        val from = (idx - 18).coerceAtLeast(0)
-                        val to = (idx + q.length + 38).coerceAtMost(txt.length)
-                        val snippet = (if (from > 0) "…" else "") + txt.substring(from, to) + (if (to < txt.length) "…" else "")
-                        hits.add(i to getString(R.string.search_match, i + 1, snippet))
+                // Slides parse on demand now, so the scan runs off the main thread;
+                // the progress bar is reused while it works.
+                val myDeck = d
+                val myToken = token
+                progressBar.visibility = View.VISIBLE
+                try {
+                    io.execute {
+                        val hits = ArrayList<Pair<Int, String>>()
+                        for ((i, s) in myDeck.slides.withIndex()) {
+                            val txt = s.textContent()
+                            val idx = txt.indexOf(q, ignoreCase = true)
+                            if (idx >= 0) {
+                                val from = (idx - 18).coerceAtLeast(0)
+                                val to = (idx + q.length + 38).coerceAtMost(txt.length)
+                                val snippet = (if (from > 0) "…" else "") + txt.substring(from, to) + (if (to < txt.length) "…" else "")
+                                hits.add(i to getString(R.string.search_match, i + 1, snippet))
+                            }
+                        }
+                        ui.post {
+                            progressBar.visibility = View.GONE
+                            if (myToken != token || deck !== myDeck || isFinishing) return@post
+                            when {
+                                hits.isEmpty() -> Toast.makeText(this, R.string.search_none, Toast.LENGTH_SHORT).show()
+                                hits.size == 1 -> jumpTo(hits[0].first)
+                                else -> AlertDialog.Builder(this)
+                                    .setTitle(getString(R.string.menu_search) + " (${hits.size})")
+                                    .setItems(hits.map { it.second }.toTypedArray()) { _, which -> jumpTo(hits[which].first) }
+                                    .show()
+                            }
+                        }
                     }
-                }
-                when {
-                    hits.isEmpty() -> Toast.makeText(this, R.string.search_none, Toast.LENGTH_SHORT).show()
-                    hits.size == 1 -> jumpTo(hits[0].first)
-                    else -> AlertDialog.Builder(this)
-                        .setTitle(getString(R.string.menu_search) + " (${hits.size})")
-                        .setItems(hits.map { it.second }.toTypedArray()) { _, which -> jumpTo(hits[which].first) }
-                        .show()
+                } catch (_: Exception) {
+                    progressBar.visibility = View.GONE
                 }
             }
             .setNegativeButton(R.string.cancel, null)
@@ -996,6 +1034,10 @@ class MainActivity : Activity() {
             return
         }
         recentSection.visibility = View.VISIBLE
+        if (!recentsLogged) {
+            recentsLogged = true
+            Log.d("LitePPTX", "recents rendered, ${entries.size} entries")
+        }
         for (e in entries) {
             val row = layoutInflater.inflate(R.layout.item_recent, recentList, false)
             row.findViewById<TextView>(R.id.tvRecentName).text = e.name
@@ -1295,6 +1337,12 @@ class MainActivity : Activity() {
         progressBar.visibility = View.GONE
         showCounter("${jump + 1} / $slideCount")
         syncNotesBadge()
+        // First deck on screen: the moment the app becomes useful. Compare
+        // against v1.7.0 with `adb logcat -s LitePPTX`.
+        if (firstShownAt == 0L) {
+            firstShownAt = SystemClock.elapsedRealtime()
+            Log.d("LitePPTX", "first deck shown, $slideCount slides")
+        }
     }
 
     private fun showError(failedUri: Uri) {
